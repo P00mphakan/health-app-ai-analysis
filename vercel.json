@@ -4,6 +4,6 @@
   "outputDirectory": "public",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|favicon\\.|apple-touch-icon\\.png).*)", "destination": "/index.html" }
   ]
 }
