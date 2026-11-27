@@ -25,8 +25,10 @@ SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
 ATHLETE_SLUG = os.getenv("ATHLETE_SLUG", "pluk").strip()
 
-# พาธโฟลเดอร์ iCloud Drive บน macOS (สำหรับ Windows ปรับเป็น Path.home() / "iCloudDrive/Zepp/FITs")
-ICLOUD_FIT_DIR = Path.home() / "Library/Mobile Documents/com~apple~CloudDocs/Zepp/FITs"
+# พาธโฟลเดอร์ iCloud Drive ของแอป Zepp บน macOS
+ICLOUD_FIT_DIR = Path.home() / "Library/Mobile Documents/iCloud~com~huami~zepp~data/Documents/FITs"
+if not ICLOUD_FIT_DIR.exists():
+    ICLOUD_FIT_DIR = Path.home() / "Library/Mobile Documents/com~apple~CloudDocs/Zepp/FITs"
 
 
 def get_client():

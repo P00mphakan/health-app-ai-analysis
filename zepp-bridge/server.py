@@ -46,6 +46,7 @@ WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "").strip()
 POLL_SECONDS = max(15, int(os.getenv("ZEPP_POLL_SECONDS", "60")))
 
 DEFAULT_ICLOUD_DIRS = [
+    Path.home() / "Library/Mobile Documents/iCloud~com~huami~zepp~data/Documents/FITs",
     Path.home() / "Library/Mobile Documents/com~apple~CloudDocs/Zepp/FITs",
     Path.home() / "Library/Mobile Documents/com~apple~CloudDocs/Zepp",
     Path.home() / "iCloudDrive/Zepp/FITs",
@@ -212,7 +213,7 @@ def parse_gpx_bytes(raw: bytes, filename: str) -> Dict[str, Any]:
     }
 
 
-async def push_file_to_web(file_path: Path, slug_override: str = "") -> Dict[str, Any]:
+async def push_file_to_web(file_path: Path, slug_override: str = "", analyze: bool = True) -> Dict[str, Any]:
     raw = file_path.read_bytes()
     ext = file_path.suffix.lower()
     slug = (slug_override or ATHLETE_SLUG).strip().lower()
@@ -226,11 +227,11 @@ async def push_file_to_web(file_path: Path, slug_override: str = "") -> Dict[str
             "filename": file_path.name,
             "fit_base64": base64.b64encode(raw).decode("ascii"),
             "source": "zepp_bridge_fit",
-            "analyze": True,
+            "analyze": analyze,
         }
     elif ext == ".gpx":
         workout = parse_gpx_bytes(raw, file_path.name)
-        payload = {"slug": slug, "workout": workout, "analyze": True}
+        payload = {"slug": slug, "workout": workout, "analyze": analyze}
     else:
         raise ValueError(f"Unsupported file extension: {ext}")
 
@@ -243,41 +244,56 @@ async def push_file_to_web(file_path: Path, slug_override: str = "") -> Dict[str
         return data
 
 
-async def scan_and_sync_once() -> Dict[str, Any]:
+async def scan_and_sync_once(max_files: int = 50) -> Dict[str, Any]:
     bridge_state["last_scan_at"] = datetime.now(timezone.utc).isoformat()
     watch_dirs = resolve_watch_dirs()
     synced_now: List[str] = []
     errors: List[str] = []
 
+    candidates: List[Path] = []
     seen_paths = set()
     for folder in watch_dirs:
         for pattern in ("*.fit", "*.FIT", "*.gpx", "*.GPX"):
-            for file_path in sorted(folder.glob(pattern)):
+            for file_path in folder.glob(pattern):
                 resolved = str(file_path.resolve())
                 if resolved in seen_paths:
                     continue
                 seen_paths.add(resolved)
-                fingerprint = f"{file_path.name}:{file_path.stat().st_size}:{int(file_path.stat().st_mtime)}"
-                if bridge_state["synced_files"].get(resolved) == fingerprint:
-                    continue
-                try:
-                    res = await push_file_to_web(file_path)
-                    bridge_state["synced_files"][resolved] = fingerprint
-                    bridge_state["last_synced_workout"] = res.get("saved", {}).get("title") or file_path.name
-                    bridge_state["last_error"] = None
-                    save_synced_state()
-                    synced_now.append(file_path.name)
-                    print(f"[ZeppBridge] Synced {file_path.name} -> {ATHLETE_OS_URL} (AI: {res.get('ai_provider')})")
-                except Exception as exc:
-                    msg = f"{file_path.name}: {exc}"
-                    errors.append(msg)
-                    bridge_state["last_error"] = msg
-                    print(f"[ZeppBridge] Error syncing {msg}")
+                candidates.append(file_path)
+
+    # Sort newest first so latest Zepp workouts appear on the dashboard immediately
+    candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+
+    pending: List[Path] = []
+    for file_path in candidates:
+        resolved = str(file_path.resolve())
+        fingerprint = f"{file_path.name}:{file_path.stat().st_size}:{int(file_path.stat().st_mtime)}"
+        if bridge_state["synced_files"].get(resolved) != fingerprint:
+            pending.append(file_path)
+
+    for idx, file_path in enumerate(pending[:max_files]):
+        resolved = str(file_path.resolve())
+        fingerprint = f"{file_path.name}:{file_path.stat().st_size}:{int(file_path.stat().st_mtime)}"
+        try:
+            # Only trigger LLM analysis automatically on the 2 newest workouts per batch
+            res = await push_file_to_web(file_path, analyze=(idx < 2))
+            bridge_state["synced_files"][resolved] = fingerprint
+            bridge_state["last_synced_workout"] = res.get("saved", {}).get("title") or file_path.name
+            bridge_state["last_error"] = None
+            save_synced_state()
+            synced_now.append(file_path.name)
+            print(f"[ZeppBridge] Synced {file_path.name} -> {ATHLETE_OS_URL} (AI: {res.get('ai_provider')})")
+        except Exception as exc:
+            msg = f"{file_path.name}: {exc}"
+            errors.append(msg)
+            bridge_state["last_error"] = msg
+            print(f"[ZeppBridge] Error syncing {msg}")
 
     return {
         "ok": len(errors) == 0,
         "watched_dirs": [str(d) for d in watch_dirs],
         "synced_now": synced_now,
+        "remaining_pending": max(0, len(pending) - len(synced_now)),
         "total_synced": len(bridge_state["synced_files"]),
         "errors": errors,
     }
