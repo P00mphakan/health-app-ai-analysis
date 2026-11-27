@@ -409,12 +409,10 @@
                     </div>
                   </div>
                   <div class="flex flex-wrap items-center gap-2">
-                    <span id="daily-ai-provider" class="px-2.5 py-1 rounded-full text-[10px] font-num font-semibold bg-slate-900/90 border border-slate-700 text-slate-400">Rule-Based</span>
                     <button id="daily-ai-refresh-btn" onclick="refreshDailyAiCoach()" class="hidden inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 transition-all active:scale-95" title="สร้างบทวิเคราะห์ใหม่ด้วย AI Coach">
                       <i data-lucide="sparkles" class="w-3 h-3"></i>
                       <span>วิเคราะห์ AI ใหม่</span>
                     </button>
-                    <span id="daily-verdict-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-slate-900 border border-slate-700 text-slate-400">รอข้อมูล</span>
                   </div>
                 </div>
 
@@ -2194,15 +2192,14 @@
     }
 
     function applyDailyBriefToUI(daily, fallbackCls, provider, isLoading = false, showRefresh = true) {
-      const vb = document.getElementById('daily-verdict-badge');
-      const pb = document.getElementById('daily-ai-provider');
       const rb = document.getElementById('daily-ai-refresh-btn');
       const blocks = document.getElementById('daily-coach-blocks');
 
-      vb.textContent = daily.verdict;
-      vb.className = `px-3 py-1 rounded-full text-xs font-bold border ${getDailyVerdictClass(daily.verdict, fallbackCls)}`;
-      updateProviderPill(pb, provider, isLoading);
-      if (rb) rb.classList.toggle('hidden', !showRefresh);
+      if (rb) {
+        rb.classList.toggle('hidden', !showRefresh);
+        const label = rb.querySelector('span');
+        if (label) label.textContent = isLoading ? 'กำลังวิเคราะห์...' : 'วิเคราะห์ AI ใหม่';
+      }
       renderDailyCoachBlocksSafe(blocks, daily);
     }
 
