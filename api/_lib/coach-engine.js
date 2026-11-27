@@ -12,7 +12,7 @@ export function getGeminiConfig() {
     process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
     ''
   ).trim();
-  const model = (process.env.GEMINI_MODEL || 'gemini-3.8-flash').trim();
+  const model = (process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite').trim();
   return { apiKey, model };
 }
 
@@ -22,19 +22,34 @@ function extractGeminiText(gData) {
   return answerPart?.text || null;
 }
 
-async function callGeminiGenerate({ apiKey, model, payload, timeoutMs = 15000 }) {
-  const candidates = Array.from(new Set([model, 'gemini-3.8-flash', 'gemini-flash-latest'].filter(Boolean)));
+async function callGeminiGenerate({ apiKey, model, payload, timeoutMs = 8000 }) {
+  // Prioritize fast low-latency gemini-3.1-flash-lite so serverless calls finish in ~1-2s,
+  // falling back cleanly across models on 404/429/503/timeout.
+  const candidates = Array.from(
+    new Set(['gemini-3.1-flash-lite', model, 'gemini-3-flash-preview', 'gemini-3.8-flash'].filter(Boolean))
+  );
   let lastError = 'gemini_failed';
 
   for (const m of candidates) {
     try {
+      const bodyPayload =
+        m.includes('3.8')
+          ? {
+              ...payload,
+              generationConfig: {
+                ...(payload.generationConfig || {}),
+                thinkingConfig: { thinkingLevel: 'low' }
+              }
+            }
+          : payload;
+
       const gRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent?key=${encodeURIComponent(apiKey)}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           signal: AbortSignal.timeout(timeoutMs),
-          body: JSON.stringify(payload)
+          body: JSON.stringify(bodyPayload)
         }
       );
 
@@ -45,12 +60,10 @@ async function callGeminiGenerate({ apiKey, model, payload, timeoutMs = 15000 })
         lastError = `${m}_empty_text`;
       } else {
         lastError = `${m}_http_${gRes.status}`;
-        // Retry next model only if this model is unavailable/404
-        if (gRes.status !== 404 && gRes.status !== 400) break;
+        if (gRes.status === 401 || gRes.status === 403) break;
       }
     } catch (err) {
-      lastError = err.message;
-      break;
+      lastError = `${m}:${err.message}`;
     }
   }
   return { ok: false, error: lastError };
