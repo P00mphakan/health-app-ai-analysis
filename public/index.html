@@ -793,14 +793,21 @@
               </div>
             </div>
 
-            <!-- Apple Health / Daily Vitals JSON Import Card -->
+            <!-- Zero-MacBook iPhone Auto-Sync Card -->
             <div class="glass-card rounded-3xl p-5 space-y-3">
               <div>
                 <h3 class="font-display text-sm font-bold text-white flex items-center gap-2">
-                  <i data-lucide="heart-pulse" class="w-4 h-4 text-rose-400"></i>
-                  <span>นำเข้าค่าสุขภาพรายวัน</span>
+                  <i data-lucide="smartphone" class="w-4 h-4 text-cyan-400"></i>
+                  <span>Auto-Sync จาก iPhone (ไม่ต้องเปิด Mac)</span>
                 </h3>
-                <p class="text-[11px] text-slate-400 mt-1">นำเข้าไฟล์ JSON จากแอป <strong>Health Auto Export</strong> หรือกรอก Sleep / HRV / RHR ประจำวันเพื่อให้ Body Battery และ Daily Coach ทำงาน</p>
+                <p class="text-[11px] text-slate-400 mt-1">ตั้งค่าในแอป <strong>Health Auto Export</strong> หรือ <strong>Apple Shortcuts</strong> ชี้มาที่ URL ด้านล่าง URL เดียว ได้ครบทั้ง Sleep / HRV / RHR และ Workouts อัตโนมัติทุกวัน</p>
+              </div>
+              <div class="rounded-xl bg-slate-950 border border-slate-800 p-3 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] text-slate-400">Personal Webhook URL (POST):</span>
+                  <button onclick="copyIphoneWebhookUrl()" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold">คัดลอก URL</button>
+                </div>
+                <code id="iphone-webhook-url" class="block font-num text-[10px] text-cyan-300 break-all">--</code>
               </div>
               <div class="space-y-2">
                 <label class="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 border border-emerald-500/30 text-emerald-300 font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95">
@@ -1254,9 +1261,20 @@
     // =========================================================================
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
+    function formatLocalISO(d) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
     function getTodayISO() {
-      const now = new Date();
-      return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+      return formatLocalISO(new Date());
+    }
+
+    function compareWorkoutsDesc(a, b) {
+      const d = String(b.workout_date || '').localeCompare(String(a.workout_date || ''));
+      if (d !== 0) return d;
+      const e = String(b.external_id || '').localeCompare(String(a.external_id || ''));
+      if (e !== 0) return e;
+      return String(b.created_at || '').localeCompare(String(a.created_at || ''));
     }
 
     function calcAge(birthStr) {
@@ -1367,7 +1385,7 @@
       const ref = new Date(refDateIso + 'T00:00:00');
       const start = new Date(ref);
       start.setDate(ref.getDate() - 14);
-      const startIso = start.toISOString().slice(0, 10);
+      const startIso = formatLocalISO(start);
 
       const recent = (metrics || []).filter(m => m.metric_date >= startIso && m.metric_date <= refDateIso);
       const hrvs = recent.map(m => Number(m.hrv)).filter(v => v > 0);
@@ -1378,6 +1396,14 @@
         rhrBase: rhrs.length >= 2 ? Math.round(rhrs.reduce((a, b) => a + b, 0) / rhrs.length) : Number(athlete.resting_hr),
         sampleDays: recent.length
       };
+    }
+
+    function computeLoadEstimatedReadiness(tsb, acwr) {
+      let score = 80 + (tsb || 0) * 1.35;
+      if (acwr !== null && acwr > 1.3) {
+        score -= (acwr - 1.3) * 35;
+      }
+      return Math.round(clamp(score, 12, 95));
     }
 
     function computeReadiness(metric, athlete, tsb, base14) {
@@ -1433,7 +1459,7 @@
       const cursor = new Date(start);
 
       while (cursor <= end) {
-        const iso = cursor.toISOString().slice(0, 10);
+        const iso = formatLocalISO(cursor);
         const dayWorkouts = workoutByDate[iso] || [];
         const dayTrimp = dayWorkouts.reduce((acc, w) => acc + (Number(w.trimp) > 0 ? Number(w.trimp) : calcBanisterTRIMP(w.duration_min, w.avg_hr, athlete)), 0);
         const dayDist = dayWorkouts.reduce((acc, w) => acc + (Number(w.distance_km) || 0), 0);
@@ -1445,7 +1471,9 @@
 
         const m = metricMap[iso] || null;
         const base14 = m ? get14DayBaseline(metrics, athlete, iso) : null;
-        const energy = m ? computeReadiness(m, athlete, tsb, base14) : null;
+        const energy = m
+          ? computeReadiness(m, athlete, tsb, base14)
+          : ((ctl > 0.5 || atl > 0.5) ? computeLoadEstimatedReadiness(tsb, acwr) : null);
 
         // Average EF and W/kg for workouts on this day
         const efs = dayWorkouts.map(w => calcEF(w).val).filter(v => v > 0);
@@ -1462,6 +1490,7 @@
           tsb: +tsb.toFixed(1),
           acwr: acwr !== null ? +acwr.toFixed(2) : null,
           energy,
+          energyEstimated: !m && energy !== null,
           rhr: m?.resting_hr != null ? Number(m.resting_hr) : null,
           hrv: m?.hrv != null ? Number(m.hrv) : null,
           sleep: m?.sleep_hours != null ? Number(m.sleep_hours) : null,
@@ -1486,15 +1515,15 @@
       if (tf === '1D') {
         cutoffIso = getTodayISO();
       } else if (tf === '1W') {
-        const d = new Date(today); d.setDate(today.getDate() - 6); cutoffIso = d.toISOString().slice(0, 10);
+        const d = new Date(today); d.setDate(today.getDate() - 6); cutoffIso = formatLocalISO(d);
       } else if (tf === '1M') {
-        const d = new Date(today); d.setDate(today.getDate() - 29); cutoffIso = d.toISOString().slice(0, 10);
+        const d = new Date(today); d.setDate(today.getDate() - 29); cutoffIso = formatLocalISO(d);
       } else if (tf === '1Y') {
-        const d = new Date(today); d.setFullYear(today.getFullYear() - 1); cutoffIso = d.toISOString().slice(0, 10);
+        const d = new Date(today); d.setFullYear(today.getFullYear() - 1); cutoffIso = formatLocalISO(d);
       } else if (tf === '2Y') {
-        const d = new Date(today); d.setFullYear(today.getFullYear() - 2); cutoffIso = d.toISOString().slice(0, 10);
+        const d = new Date(today); d.setFullYear(today.getFullYear() - 2); cutoffIso = formatLocalISO(d);
       } else if (tf === '3Y') {
-        const d = new Date(today); d.setFullYear(today.getFullYear() - 3); cutoffIso = d.toISOString().slice(0, 10);
+        const d = new Date(today); d.setFullYear(today.getFullYear() - 3); cutoffIso = formatLocalISO(d);
       }
 
       const rawSlice = cutoffIso ? fullTimeline.filter(d => d.date >= cutoffIso) : [...fullTimeline];
@@ -1525,7 +1554,7 @@
           const day = dt.getDay();
           const diff = dt.getDate() - day + (day === 0 ? -6 : 1);
           const mon = new Date(dt.setDate(diff));
-          key = mon.toISOString().slice(0, 10);
+          key = formatLocalISO(mon);
           label = formatThaiShort(key);
         }
         if (!buckets.has(key)) buckets.set(key, { label, items: [] });
@@ -2032,19 +2061,19 @@
         dailyAiAbortController = null;
       }
 
-      if (!latestMetric) {
+      if (!latestMetric && !latestPmc) {
         applyDailyBriefToUI(fallbackDaily, fallbackDaily.verdictCls, 'rule-based', false, false);
         return;
       }
 
-      const cached = latestMetric.ai_daily_brief;
+      const cached = latestMetric?.ai_daily_brief;
       if (!force && isValidDailyBrief(cached)) {
         applyDailyBriefToUI(cached, fallbackDaily.verdictCls, cached._provider || 'ai-cached', false, true);
         return;
       }
 
       // Render deterministic rule-based brief immediately so UI is never blank
-      const attemptKey = `${ath.id}:${latestMetric.metric_date}`;
+      const attemptKey = `${ath.id}:${latestMetric ? latestMetric.metric_date : (latestPmc?.date || getTodayISO())}`;
       if (!force && aiAttemptedDailyKeys.has(attemptKey)) {
         applyDailyBriefToUI(fallbackDaily, fallbackDaily.verdictCls, 'rule-based', false, true);
         return;
@@ -2060,7 +2089,7 @@
         {
           mode: 'daily',
           athlete: ath,
-          metrics: {
+          metrics: latestMetric ? {
             metric_date: latestMetric.metric_date,
             sleep_hours: latestMetric.sleep_hours,
             hrv: latestMetric.hrv,
@@ -2070,6 +2099,10 @@
             readiness,
             hrv_baseline_14d: base14.hrvBase,
             rhr_baseline_14d: base14.rhrBase
+          } : {
+            metric_date: latestPmc?.date || getTodayISO(),
+            note: 'ยังไม่มีข้อมูล Sleep/HRV/RHR เช้านี้ ประเมินจากโหลดการซ้อมจริงเท่านั้น',
+            estimated_readiness_from_load: readiness
           },
           pmc: latestPmc
         },
@@ -2084,7 +2117,9 @@
           _provider: result.provider,
           _generatedAt: new Date().toISOString()
         };
-        await persistDailyAiCache(ath.id, latestMetric, cachedPayload);
+        if (latestMetric) {
+          await persistDailyAiCache(ath.id, latestMetric, cachedPayload);
+        }
         if (activeAthleteId === ath.id && currentTab === 'dashboard') {
           applyDailyBriefToUI(cachedPayload, fallbackDaily.verdictCls, result.provider, false, true);
           if (force) showToast(`อัปเดต Daily Brief จาก ${result.provider} แล้ว`);
@@ -2098,7 +2133,7 @@
     function applyWorkoutReportToTargets(workout, ath, reportView, isLoading = false, target = 'both') {
       if (target === 'latest' || target === 'both') {
         const workouts = workoutsByAthlete[ath.id] || [];
-        const latestWo = workouts.toSorted((a, b) => b.workout_date.localeCompare(a.workout_date))[0] || null;
+        const latestWo = workouts.toSorted(compareWorkoutsDesc)[0] || null;
         if (activeAthleteId === ath.id && currentTab === 'dashboard' && latestWo && latestWo.id === workout.id) {
           latestReportPlainText = reportView.plainText;
           updateProviderPill(document.getElementById('latest-wo-ai-provider'), reportView._provider, isLoading);
@@ -2202,11 +2237,13 @@
       const metrics = metricsByAthlete[ath.id] || [];
       const workouts = workoutsByAthlete[ath.id] || [];
       const latestMetric = metrics[0] || null;
-      if (!latestMetric) { showToast('ยังไม่มีข้อมูลสุขภาพสำหรับวิเคราะห์'); return; }
       const fullTimeline = buildFullDailyTimeline(ath, metrics, workouts);
       const latestPmc = fullTimeline.length ? fullTimeline[fullTimeline.length - 1] : null;
-      const base14 = get14DayBaseline(metrics, ath, latestMetric.metric_date);
-      const readiness = computeReadiness(latestMetric, ath, latestPmc ? latestPmc.tsb : 0, base14);
+      if (!latestMetric && !latestPmc) { showToast('ยังไม่มีข้อมูลสุขภาพหรือการซ้อมสำหรับวิเคราะห์'); return; }
+      const base14 = get14DayBaseline(metrics, ath, latestMetric ? latestMetric.metric_date : getTodayISO());
+      const readiness = latestMetric
+        ? computeReadiness(latestMetric, ath, latestPmc ? latestPmc.tsb : 0, base14)
+        : (latestPmc ? computeLoadEstimatedReadiness(latestPmc.tsb, latestPmc.acwr) : null);
       const fallbackDaily = generateDailyCoachAnalysis(ath, latestMetric, base14, latestPmc, readiness);
       resolveDailyCoachWithAI(ath, latestMetric, base14, latestPmc, readiness, fallbackDaily, true);
     }
@@ -2215,7 +2252,7 @@
       const ath = getActiveAthlete();
       if (!ath) return;
       const workouts = workoutsByAthlete[ath.id] || [];
-      const latestWo = workouts.toSorted((a, b) => b.workout_date.localeCompare(a.workout_date))[0] || null;
+      const latestWo = workouts.toSorted(compareWorkoutsDesc)[0] || null;
       if (!latestWo) return;
       const fullTimeline = buildFullDailyTimeline(ath, metricsByAthlete[ath.id] || [], workouts);
       resolveWorkoutCoachWithAI(latestWo, ath, fullTimeline, 'latest', true);
@@ -2530,7 +2567,12 @@
       const latestMetric = metrics[0] || null;
       const latestPmc = fullTimeline.length ? fullTimeline[fullTimeline.length - 1] : null;
       const base14 = get14DayBaseline(metrics, ath, latestMetric ? latestMetric.metric_date : getTodayISO());
-      const readiness = computeReadiness(latestMetric, ath, latestPmc ? latestPmc.tsb : 0, base14);
+      const biometricReadiness = computeReadiness(latestMetric, ath, latestPmc ? latestPmc.tsb : 0, base14);
+      const hasLoadData = Boolean(latestPmc && (latestPmc.ctl > 0.5 || latestPmc.atl > 0.5));
+      const readiness = biometricReadiness !== null
+        ? biometricReadiness
+        : (hasLoadData ? computeLoadEstimatedReadiness(latestPmc.tsb, latestPmc.acwr) : null);
+      const isLoadEstimated = biometricReadiness === null && readiness !== null;
 
       const liq = document.getElementById('svg-liquid-container');
       const outline = document.getElementById('svg-outline-path');
@@ -2547,11 +2589,13 @@
         unitEl.className = 'font-num text-xl font-bold text-slate-500';
         pillEl.textContent = 'รอข้อมูลสุขภาพ';
         pillEl.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700';
-        dateSub.textContent = 'บันทึก Sleep / HRV / RHR เพื่อเริ่มคำนวณ';
+        dateSub.textContent = 'บันทึก Sleep / HRV / RHR หรือนำเข้าไฟล์ .FIT เพื่อเริ่มคำนวณ';
       } else {
         liq.setAttribute('opacity', '1');
         scoreEl.textContent = readiness;
-        dateSub.textContent = `ณ วันที่ ${formatThaiDate(latestMetric.metric_date)}`;
+        dateSub.textContent = isLoadEstimated
+          ? `ประเมินจากโหลดซ้อม (${formatThaiDate(latestPmc.date)}) • เพิ่ม Sleep/HRV เพื่อความแม่นยำสูงสุด`
+          : `ณ วันที่ ${formatThaiDate(latestMetric.metric_date)}`;
         const h = sil.bottomY - sil.topY;
         const fillY = sil.bottomY - (h * (readiness / 100)) - 10;
         document.getElementById('energy-fill-group').setAttribute('transform', `translate(0, ${fillY.toFixed(1)})`);
@@ -2614,7 +2658,7 @@
       `).join('');
 
       // 4. Latest Post-Workout Coaching Card
-      const latestWo = workouts.toSorted((a, b) => b.workout_date.localeCompare(a.workout_date))[0] || null;
+      const latestWo = workouts.toSorted(compareWorkoutsDesc)[0] || null;
       const woSub = document.getElementById('latest-wo-subtitle');
       const woActs = document.getElementById('latest-wo-actions');
       const woBody = document.getElementById('latest-workout-coach-body');
@@ -2816,7 +2860,7 @@
       const filtered = workouts
         .filter(w => currentFilter === 'all' || w.sport_type === currentFilter)
         .filter(w => !q || (w.title || '').toLowerCase().includes(q) || (w.sport_type || '').toLowerCase().includes(q))
-        .sort((a, b) => b.workout_date.localeCompare(a.workout_date));
+        .toSorted(compareWorkoutsDesc);
 
       const box = document.getElementById('workout-list');
       if (filtered.length === 0) {
@@ -3519,11 +3563,23 @@
       return { label: 'Manual', cls: 'bg-slate-800 text-slate-300 border-slate-700' };
     }
 
+    function copyIphoneWebhookUrl() {
+      const el = document.getElementById('iphone-webhook-url');
+      if (!el || !el.textContent || el.textContent === '--') return;
+      copyText(el.textContent, 'คัดลอก iPhone Auto-Sync URL แล้ว');
+    }
+
     function renderImportTab() {
       const ath = getActiveAthlete();
       if (!ath) return;
 
-      const workouts = (workoutsByAthlete[ath.id] || []).toSorted((a, b) => b.workout_date.localeCompare(a.workout_date));
+      const hookEl = document.getElementById('iphone-webhook-url');
+      if (hookEl) {
+        const origin = window.location.protocol === 'file:' ? 'https://healthmeai.vercel.app' : window.location.origin;
+        hookEl.textContent = `${origin}/api/ingest-health?u=${ath.slug}`;
+      }
+
+      const workouts = (workoutsByAthlete[ath.id] || []).toSorted(compareWorkoutsDesc);
       const metrics = (metricsByAthlete[ath.id] || []).toSorted((a, b) => b.metric_date.localeCompare(a.metric_date));
       const fitCount = workouts.filter(w => String(w.source || '').includes('fit')).length;
       const latestDate = workouts[0]?.workout_date || metrics[0]?.metric_date || null;

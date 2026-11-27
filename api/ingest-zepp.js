@@ -14,7 +14,7 @@ function parseFitBuffer(buffer) {
     const parser = new FitParser({
       force: true,
       speedUnit: 'km/h',
-      lengthUnit: 'km',
+      lengthUnit: 'm',
       temperatureUnit: 'celsius',
       elapsedRecordField: true,
       mode: 'list'
@@ -48,19 +48,24 @@ function extractFitWorkout(parsed, filename, athlete) {
   let cadence = 0;
   let elevationGain = 0;
   let rawSport = 'running';
+  let displaySport = 'running';
   let startTime = null;
 
   if (session) {
     startTime = session.start_time || session.timestamp || null;
     durationMin = +(((session.total_timer_time || session.total_elapsed_time || 0)) / 60).toFixed(2);
-    distanceKm = +(Number(session.total_distance || 0)).toFixed(2);
+    // lengthUnit is 'm' so distance is in meters and total_ascent stays in exact meters
+    distanceKm = +(Number(session.total_distance || 0) / 1000).toFixed(2);
     avgHr = Math.round(Number(session.avg_heart_rate || 0));
     maxHr = Math.round(Number(session.max_heart_rate || 0));
     avgPower = Math.round(Number(session.avg_power || 0));
     const rawCad = Number(session.avg_running_cadence || session.avg_cadence || 0);
     cadence = rawCad > 0 && rawCad < 110 ? Math.round(rawCad * 2) : Math.round(rawCad);
     elevationGain = +(Number(session.total_ascent || 0)).toFixed(1);
-    rawSport = String(session.sport || session.sub_sport || 'running');
+    const sp = String(session.sport || '').trim();
+    const sub = String(session.sub_sport || '').trim();
+    rawSport = `${sp} ${sub}`.trim() || 'running';
+    displaySport = sub && sub.toLowerCase() !== 'generic' && sub.toLowerCase() !== 'street' ? sub : (sp || 'running');
   } else if (records.length > 0) {
     startTime = records[0].timestamp || null;
     const endTime = records[records.length - 1].timestamp || null;
@@ -70,7 +75,7 @@ function extractFitWorkout(parsed, filename, athlete) {
       durationMin = +(records.length / 60).toFixed(2);
     }
     const lastDist = [...records].reverse().find((r) => typeof r.distance === 'number')?.distance || 0;
-    distanceKm = +Number(lastDist).toFixed(2);
+    distanceKm = +(Number(lastDist) / 1000).toFixed(2);
     const hrs = records.map((r) => Number(r.heart_rate)).filter((v) => v > 30 && v < 230);
     if (hrs.length) {
       avgHr = Math.round(hrs.reduce((a, b) => a + b, 0) / hrs.length);
@@ -83,7 +88,7 @@ function extractFitWorkout(parsed, filename, athlete) {
 
   const sportType = normalizeSportType(rawSport);
   const workoutDate = toIsoDate(startTime);
-  const niceSport = rawSport.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  const niceSport = displaySport.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   const trimp = calcBanisterTRIMP(durationMin, avgHr, athlete);
 
   return {
