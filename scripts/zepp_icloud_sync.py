@@ -4,14 +4,35 @@ from pathlib import Path
 from fitparse import FitFile
 from supabase import create_client
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "https://YOUR_PROJECT.supabase.co")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "YOUR_KEY")
-ATHLETE_SLUG = os.getenv("ATHLETE_SLUG", "pluk")
+
+def load_dotenv_files():
+    root = Path(__file__).resolve().parent.parent
+    for fname in (".env.local", ".env"):
+        env_path = root / fname
+        if not env_path.exists():
+            continue
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
+
+load_dotenv_files()
+
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+ATHLETE_SLUG = os.getenv("ATHLETE_SLUG", "pluk").strip()
 
 # พาธโฟลเดอร์ iCloud Drive บน macOS (สำหรับ Windows ปรับเป็น Path.home() / "iCloudDrive/Zepp/FITs")
 ICLOUD_FIT_DIR = Path.home() / "Library/Mobile Documents/com~apple~CloudDocs/Zepp/FITs"
 
-sb = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+def get_client():
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        raise RuntimeError("กรุณาตั้งค่า SUPABASE_URL และ SUPABASE_SERVICE_ROLE_KEY ใน .env หรือ Environment Variables")
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 def calc_trimp(dur, avg_hr, sex, rhr, max_hr):
@@ -20,7 +41,7 @@ def calc_trimp(dur, avg_hr, sex, rhr, max_hr):
     return round(dur * hrr * k1 * math.exp(k2 * hrr), 1)
 
 
-def sync_once():
+def sync_once(sb):
     ath = sb.table("athletes").select("*").eq("slug", ATHLETE_SLUG).single().execute().data
     if not ICLOUD_FIT_DIR.exists():
         print(f"ไม่พบโฟลเดอร์: {ICLOUD_FIT_DIR}")
@@ -67,9 +88,10 @@ def sync_once():
 
 if __name__ == "__main__":
     print("Starting Zepp iCloud FIT Auto-Sync...")
+    sb = get_client()
     while True:
         try:
-            sync_once()
+            sync_once(sb)
         except Exception as e:
             print("Sync Error:", e)
         time.sleep(300)

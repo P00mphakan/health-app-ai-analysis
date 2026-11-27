@@ -31,8 +31,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Supabase JS v2 CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     html, body {
@@ -175,10 +173,9 @@
             <span class="hidden md:inline">คัดลอกลิงก์ส่วนตัว</span>
           </button>
 
-          <button onclick="openSupabaseModal()" id="sb-status-btn" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-xs font-semibold text-amber-300 transition-all active:scale-95">
-            <span id="sb-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
-            <span id="sb-status-text" class="hidden sm:inline">ยังไม่เชื่อมต่อ Supabase</span>
-            <span id="sb-status-short" class="sm:hidden">ตั้งค่า DB</span>
+          <button onclick="refreshBackendSync()" id="sb-status-btn" class="relative inline-flex items-center justify-center w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-400 transition-all active:scale-95" title="กำลังตรวจสอบสถานะระบบ..." aria-label="สถานะการเชื่อมต่อ Backend">
+            <i id="sb-status-icon" data-lucide="database" class="w-4 h-4"></i>
+            <span id="sb-dot" class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-slate-500 ring-2 ring-[#070b14]"></span>
           </button>
         </div>
       </div>
@@ -195,8 +192,8 @@
             <span>บันทึก &amp; วิเคราะห์ Workout</span>
           </button>
           <button onclick="switchTab('settings')" data-tab="settings" class="nav-btn px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all">
-            <i data-lucide="settings-2" class="w-4 h-4"></i>
-            <span>สมาชิก &amp; ตั้งค่าระบบ</span>
+            <i data-lucide="users" class="w-4 h-4"></i>
+            <span>สมาชิกครอบครัว</span>
           </button>
         </nav>
 
@@ -219,20 +216,6 @@
   <!-- ========================================================= -->
   <main class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
-    <!-- Local-only Persistence Warning Banner -->
-    <div id="local-warning-banner" class="hidden mb-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-start gap-2.5 text-xs text-amber-200">
-        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i>
-        <div>
-          <p class="font-bold text-amber-300">โหมด Local Storage ชั่วคราว (ยังไม่ได้เชื่อมต่อ Supabase)</p>
-          <p class="text-amber-200/80 mt-0.5">เชื่อมต่อ Supabase เพื่อเก็บข้อมูลถาวร ใช้งานร่วมกันทั้งครอบครัวผ่านลิงก์ <code class="font-num">?u=slug</code> และรองรับ Auto-Sync จาก Zepp / Apple Health</p>
-        </div>
-      </div>
-      <button onclick="openSupabaseModal()" class="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs shrink-0 transition-all active:scale-95">
-        เชื่อมต่อ Supabase
-      </button>
-    </div>
-
     <!-- Global Empty State (0 athletes) -->
     <div id="global-empty-athletes" class="hidden glass-card rounded-3xl p-8 sm:p-12 text-center max-w-2xl mx-auto my-6">
       <div class="w-16 h-16 rounded-3xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto mb-4">
@@ -240,16 +223,12 @@
       </div>
       <h2 class="font-display text-xl font-bold text-white mb-2">ATHLETE OS — Production Mode</h2>
       <p class="text-sm text-slate-400 mb-6 leading-relaxed">
-        ระบบพร้อมใช้งานจริงโดยไม่มีข้อมูลจำลอง เริ่มต้นด้วยการเชื่อมต่อ Supabase หรือสร้างโปรไฟล์สมาชิกคนแรกเพื่อบันทึกสุขภาพและนำเข้าไฟล์ <code class="font-num text-cyan-300">.GPX</code> จาก Zepp / Amazfit ได้ทันที
+        ระบบเชื่อมต่อฐานข้อมูลและ AI Coach อัตโนมัติ สร้างโปรไฟล์สมาชิกคนแรกเพื่อเริ่มบันทึกสุขภาพและนำเข้าไฟล์ <code class="font-num text-cyan-300">.GPX</code> จาก Zepp / Amazfit ได้ทันที
       </p>
       <div class="flex flex-wrap items-center justify-center gap-3">
-        <button onclick="openSupabaseModal()" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-semibold text-cyan-300 transition-all">
-          <i data-lucide="database" class="w-4 h-4"></i>
-          <span>1. เชื่อมต่อ Supabase</span>
-        </button>
         <button onclick="openAthleteModal()" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all">
           <i data-lucide="user-plus" class="w-4 h-4"></i>
-          <span>2. สร้างโปรไฟล์สมาชิกคนแรก</span>
+          <span>สร้างโปรไฟล์สมาชิกคนแรก</span>
         </button>
       </div>
     </div>
@@ -707,175 +686,30 @@
         <div id="family-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
       </div>
 
-      <!-- Supabase & Auto-Sync Integration Scripts -->
-      <div class="pt-6 border-t border-slate-800/80 space-y-5">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 class="font-display text-lg font-bold text-white">เชื่อมต่อ Supabase &amp; สคริปต์ Auto-Sync (Zepp iCloud + Apple Health)</h2>
-            <p class="text-xs text-slate-400">พร้อมวางขึ้น Vercel และเชื่อมฐานข้อมูลจริงทันที</p>
-          </div>
-          <button onclick="openSupabaseModal()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-cyan-300">
-            <i data-lucide="database" class="w-4 h-4"></i>
-            <span>ตั้งค่าเชื่อมต่อ Supabase</span>
-          </button>
-        </div>
-
-        <!-- 1. SQL Schema -->
-        <div class="glass-card rounded-3xl p-5">
-          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <div>
-              <h3 class="font-display text-sm font-bold text-white">1. Supabase SQL Schema (ตาราง athletes, daily_metrics, workouts)</h3>
-              <p class="text-[11px] text-slate-400">คัดลอกไปรันใน Supabase → SQL Editor เพื่อสร้างตาราง</p>
-            </div>
-            <button onclick="copyBlockText('code-sql', 'คัดลอก SQL Schema แล้ว')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-semibold text-emerald-300">
-              <i data-lucide="copy" class="w-3.5 h-3.5"></i><span>คัดลอก SQL</span>
+      <!-- Compact Automatic Backend Status Icons -->
+      <div class="pt-5 border-t border-slate-800/80">
+        <div class="glass-card rounded-2xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+          <span class="text-xs font-semibold text-slate-400">สถานะระบบอัตโนมัติ (Backend)</span>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <span id="status-pill-db" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-[11px] font-medium text-slate-400" title="ฐานข้อมูล Supabase">
+              <i data-lucide="database" class="w-3.5 h-3.5"></i>
+              <span id="status-dot-db" class="w-2 h-2 rounded-full bg-slate-500"></span>
+              <span>DB</span>
+            </span>
+            <span id="status-pill-ai" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-[11px] font-medium text-slate-400" title="AI Coach Engine">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              <span id="status-dot-ai" class="w-2 h-2 rounded-full bg-slate-500"></span>
+              <span>AI</span>
+            </span>
+            <span id="status-pill-hook" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-[11px] font-medium text-slate-400" title="Apple Health / Zepp Auto-Sync">
+              <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+              <span id="status-dot-hook" class="w-2 h-2 rounded-full bg-slate-500"></span>
+              <span>Sync</span>
+            </span>
+            <button onclick="refreshBackendSync()" class="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 transition-all active:scale-95" title="ซิงก์ข้อมูลล่าสุด">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
             </button>
           </div>
-          <pre id="code-sql" class="bg-slate-950 border border-slate-800 rounded-2xl p-4 font-num text-[11px] text-slate-300 overflow-x-auto max-h-56 leading-relaxed">CREATE TABLE IF NOT EXISTS athletes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  slug TEXT UNIQUE NOT NULL,
-  name TEXT NOT NULL,
-  sex TEXT NOT NULL CHECK (sex IN ('male', 'female')),
-  birth_date DATE NOT NULL,
-  weight_kg NUMERIC NOT NULL,
-  height_cm NUMERIC NOT NULL,
-  max_hr INT NOT NULL,
-  resting_hr INT NOT NULL,
-  hrv_baseline INT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS daily_metrics (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  athlete_id UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
-  metric_date DATE NOT NULL,
-  sleep_hours NUMERIC,
-  hrv INT,
-  resting_hr INT,
-  weight_kg NUMERIC,
-  steps INT,
-  ai_daily_brief JSONB, -- แคชบทวิเคราะห์ประจำวัน ลดการยิง API ซ้ำ
-  created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(athlete_id, metric_date)
-);
-
-CREATE TABLE IF NOT EXISTS workouts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  athlete_id UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
-  external_id TEXT UNIQUE,
-  workout_date DATE NOT NULL,
-  sport_type TEXT NOT NULL,
-  title TEXT,
-  duration_min NUMERIC NOT NULL,
-  distance_km NUMERIC DEFAULT 0,
-  avg_hr INT NOT NULL,
-  max_hr INT DEFAULT 0,
-  avg_power INT DEFAULT 0,
-  cadence INT DEFAULT 0,
-  elevation_gain NUMERIC DEFAULT 0,
-  rpe INT DEFAULT 5,
-  trimp NUMERIC DEFAULT 0,
-  source TEXT DEFAULT 'manual',
-  ai_coach_report JSONB, -- แคชบทวิเคราะห์หลัง Workout
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
-ALTER TABLE athletes DISABLE ROW LEVEL SECURITY;
-ALTER TABLE daily_metrics DISABLE ROW LEVEL SECURITY;
-ALTER TABLE workouts DISABLE ROW LEVEL SECURITY;</pre>
-        </div>
-
-        <!-- 2. Python Zepp iCloud FIT Sync -->
-        <div class="glass-card rounded-3xl p-5">
-          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <div>
-              <h3 class="font-display text-sm font-bold text-white">2. สคริปต์ Python Auto-Sync จาก Zepp iCloud Backup (<code class="font-num text-cyan-300">scripts/zepp_icloud_sync.py</code>)</h3>
-              <p class="text-[11px] text-slate-400">ดึงไฟล์ .fit จากโฟลเดอร์ iCloud คำนวณ Banister TRIMP แยกเพศ และ Upsert ขึ้น Supabase อัตโนมัติ</p>
-            </div>
-            <button onclick="copyBlockText('code-python', 'คัดลอก Python Script แล้ว')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-xs font-semibold text-cyan-300">
-              <i data-lucide="copy" class="w-3.5 h-3.5"></i><span>คัดลอก Python</span>
-            </button>
-          </div>
-          <pre id="code-python" class="bg-slate-950 border border-slate-800 rounded-2xl p-4 font-num text-[11px] text-slate-300 overflow-x-auto max-h-56 leading-relaxed"># pip install fitparse supabase
-import os, time, math
-from pathlib import Path
-from fitparse import FitFile
-from supabase import create_client
-
-SUPABASE_URL = os.getenv("SUPABASE_URL", "https://YOUR_PROJECT.supabase.co")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "YOUR_KEY")
-ATHLETE_SLUG = os.getenv("ATHLETE_SLUG", "pluk")
-ICLOUD_FIT_DIR = Path.home() / "Library/Mobile Documents/com~apple~CloudDocs/Zepp/FITs"
-sb = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-def calc_trimp(dur, avg_hr, sex, rhr, max_hr):
-    hrr = max(0.0, min(1.0, (avg_hr - rhr) / max(20, max_hr - rhr)))
-    k1, k2 = (0.86, 1.67) if sex == "female" else (0.64, 1.92)
-    return round(dur * hrr * k1 * math.exp(k2 * hrr), 1)
-
-def sync_once():
-    ath = sb.table("athletes").select("*").eq("slug", ATHLETE_SLUG).single().execute().data
-    if not ICLOUD_FIT_DIR.exists(): return
-    for f in sorted(ICLOUD_FIT_DIR.glob("*.fit")):
-        ext_id = f"fit_{ath['slug']}_{f.stem}"
-        if sb.table("workouts").select("id").eq("external_id", ext_id).execute().data: continue
-        fit = FitFile(str(f))
-        s = next(fit.get_messages("session"), None)
-        if not s: continue
-        v = {x.name: x.value for x in s}
-        dur = round((v.get("total_timer_time") or 0) / 60.0, 2)
-        avg_hr = int(v.get("avg_heart_rate") or 0)
-        raw_sport = str(v.get("sport") or "running").lower()
-        sport = "running" if "run" in raw_sport else ("badminton" if "badminton" in raw_sport else ("football" if "soccer" in raw_sport or "football" in raw_sport else ("cycling" if "cycl" in raw_sport else "other")))
-        sb.table("workouts").upsert({
-            "athlete_id": ath["id"],
-            "external_id": ext_id,
-            "workout_date": v["start_time"].strftime("%Y-%m-%d") if v.get("start_time") else time.strftime("%Y-%m-%d"),
-            "sport_type": sport,
-            "title": f"Zepp {raw_sport.title()} ({f.stem})",
-            "duration_min": dur,
-            "distance_km": round((v.get("total_distance") or 0) / 1000.0, 2),
-            "avg_hr": avg_hr,
-            "max_hr": int(v.get("max_heart_rate") or 0),
-            "avg_power": int(v.get("avg_power") or 0),
-            "cadence": int((v.get("avg_running_cadence") or 0) * 2),
-            "elevation_gain": round(v.get("total_ascent") or 0, 1),
-            "trimp": calc_trimp(dur, avg_hr, ath["sex"], ath["resting_hr"], ath["max_hr"]),
-            "source": "zepp_icloud_fit"
-        }, on_conflict="external_id").execute()
-
-if __name__ == "__main__":
-    while True:
-        try: sync_once()
-        except Exception as e: print("Sync Error:", e)
-        time.sleep(300)</pre>
-        </div>
-
-        <!-- 3. Apple Health JSON Webhook Spec -->
-        <div class="glass-card rounded-3xl p-5">
-          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <div>
-              <h3 class="font-display text-sm font-bold text-white">3. Apple Health → Health Auto Export / Shortcuts Webhook (<code class="font-num text-emerald-300">/api/ingest-health</code>)</h3>
-              <p class="text-[11px] text-slate-400">ส่งค่า Sleep, HRV, Resting HR, Weight, Steps จาก iPhone เข้า Vercel API → Supabase อัตโนมัติทุกเช้า</p>
-            </div>
-            <button onclick="copyBlockText('code-webhook', 'คัดลอก JSON Spec แล้ว')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-xs font-semibold text-indigo-300">
-              <i data-lucide="copy" class="w-3.5 h-3.5"></i><span>คัดลอก Spec</span>
-            </button>
-          </div>
-          <pre id="code-webhook" class="bg-slate-950 border border-slate-800 rounded-2xl p-4 font-num text-[11px] text-slate-300 overflow-x-auto leading-relaxed">POST https://YOUR-VERCEL-DOMAIN.vercel.app/api/ingest-health?u=pluk
-Headers:
-  Content-Type: application/json
-  x-webhook-secret: YOUR_WEBHOOK_SECRET
-
-Body (หรือส่ง JSON จากแอป Health Auto Export ได้โดยตรง):
-{
-  "metric_date": "2026-11-27",
-  "sleep_hours": 7.6,
-  "hrv": 64,
-  "resting_hr": 52,
-  "weight_kg": 57.0,
-  "steps": 8500
-}</pre>
         </div>
       </div>
     </section>
@@ -894,8 +728,8 @@ Body (หรือส่ง JSON จากแอป Health Auto Export ได้
         <span>Workout / GPX</span>
       </button>
       <button onclick="switchTab('settings')" data-tab="settings" class="mob-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[11px] font-medium">
-        <i data-lucide="settings-2" class="w-5 h-5 mb-0.5"></i>
-        <span>สมาชิก/ตั้งค่า</span>
+        <i data-lucide="users" class="w-5 h-5 mb-0.5"></i>
+        <span>สมาชิก</span>
       </button>
     </div>
   </nav>
@@ -1138,40 +972,6 @@ Body (หรือส่ง JSON จากแอป Health Auto Export ได้
   </div>
 
   <!-- ========================================================= -->
-  <!-- MODAL: SUPABASE CONNECTION                                -->
-  <!-- ========================================================= -->
-  <div id="modal-supabase" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-    <div class="glass-card rounded-3xl w-full max-w-lg p-6 border border-slate-700 my-auto">
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <h3 class="font-display text-base font-bold text-white flex items-center gap-2">
-            <i data-lucide="database" class="w-5 h-5 text-emerald-400"></i>
-            <span>เชื่อมต่อ Supabase (Production)</span>
-          </h3>
-          <p class="text-xs text-slate-400">กรอก Project URL &amp; Anon Key หรือใส่ไว้ในตัวแปร SUPABASE_CONFIG ในไฟล์</p>
-        </div>
-        <button onclick="closeModal('modal-supabase')" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
-      </div>
-
-      <div class="space-y-4">
-        <div>
-          <label class="block text-xs text-slate-400 mb-1">Supabase Project URL</label>
-          <input id="sb-in-url" type="url" placeholder="https://xxxxxxxxxxxx.supabase.co" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-num text-white outline-none focus:border-emerald-500" />
-        </div>
-        <div>
-          <label class="block text-xs text-slate-400 mb-1">Supabase Anon Public Key</label>
-          <input id="sb-in-key" type="password" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-num text-white outline-none focus:border-emerald-500" />
-        </div>
-        <div id="sb-msg" class="hidden rounded-xl p-3 text-xs border"></div>
-        <div class="flex flex-wrap gap-2">
-          <button onclick="connectSupabase()" class="flex-1 py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-all">เชื่อมต่อ &amp; โหลดข้อมูล</button>
-          <button onclick="disconnectSupabase()" class="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs">ตัดการเชื่อมต่อ</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========================================================= -->
   <!-- MODAL: CUSTOM CONFIRM DIALOG                              -->
   <!-- ========================================================= -->
   <div id="modal-confirm" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -1199,16 +999,9 @@ Body (หรือส่ง JSON จากแอป Health Auto Export ได้
   <!-- ========================================================= -->
   <script>
     // =========================================================================
-    // 1. SUPABASE CONFIG (Insert keys here for Vercel deploy or use UI modal)
+    // 1. LOCAL FALLBACK STORAGE KEYS (Backend connects automatically via /api/db)
     // =========================================================================
-    const SUPABASE_CONFIG = {
-      url: '',
-      anonKey: ''
-    };
-
     const LS = {
-      SB_URL: 'athlete_os_prod_sb_url',
-      SB_KEY: 'athlete_os_prod_sb_key',
       ATHLETES: 'athlete_os_prod_local_athletes',
       METRICS: 'athlete_os_prod_local_metrics',
       WORKOUTS: 'athlete_os_prod_local_workouts'
@@ -1241,8 +1034,15 @@ Body (หรือส่ง JSON จากแอป Health Auto Export ได้
     };
 
     // State (Zero Mock Data)
-    let sb = null;
     let isSupabaseLive = false;
+    let backendStatus = {
+      supabase: false,
+      aiPrimary: false,
+      aiPrimaryModel: 'gemini-2.5-flash',
+      aiFallback: false,
+      aiFallbackModel: 'qwen2.5:14b',
+      webhook: false
+    };
     let athletes = [];
     let metricsByAthlete = {};
     let workoutsByAthlete = {};
@@ -2006,12 +1806,12 @@ Body (หรือส่ง JSON จากแอป Health Auto Export ได้
 
     async function persistDailyAiCache(athleteId, metric, cachedBrief) {
       metric.ai_daily_brief = cachedBrief;
-      if (isSupabaseLive && sb && metric.id && !String(metric.id).startsWith('local-')) {
-        const { error } = await sb
-          .from('daily_metrics')
-          .update({ ai_daily_brief: cachedBrief })
-          .eq('id', metric.id);
-        if (error) console.warn('Failed to cache ai_daily_brief in Supabase:', error.message);
+      if (isSupabaseLive && metric.id && !String(metric.id).startsWith('local-')) {
+        const res = await apiDb('cache_daily_brief', {
+          id: metric.id,
+          payload: { ai_daily_brief: cachedBrief }
+        });
+        if (!res.ok) console.warn('Failed to cache ai_daily_brief in Supabase:', res.error);
       } else if (!isSupabaseLive) {
         saveLocalStorage();
       }
@@ -2019,12 +1819,12 @@ Body (หรือส่ง JSON จากแอป Health Auto Export ได้
 
     async function persistWorkoutAiCache(athleteId, workout, cachedReport) {
       workout.ai_coach_report = cachedReport;
-      if (isSupabaseLive && sb && workout.id && !String(workout.id).startsWith('local-')) {
-        const { error } = await sb
-          .from('workouts')
-          .update({ ai_coach_report: cachedReport })
-          .eq('id', workout.id);
-        if (error) console.warn('Failed to cache ai_coach_report in Supabase:', error.message);
+      if (isSupabaseLive && workout.id && !String(workout.id).startsWith('local-')) {
+        const res = await apiDb('cache_workout_report', {
+          id: workout.id,
+          payload: { ai_coach_report: cachedReport }
+        });
+        if (!res.ok) console.warn('Failed to cache ai_coach_report in Supabase:', res.error);
       } else if (!isSupabaseLive) {
         saveLocalStorage();
       }
@@ -2249,55 +2049,79 @@ Body (หรือส่ง JSON จากแอป Health Auto Export ได้
     }
 
     // =========================================================================
-    // 4. SUPABASE & LOCAL STORAGE LAYER (ZERO MOCK DATA)
+    // 4. AUTOMATIC BACKEND (/api/db -> SUPABASE) & LOCAL FALLBACK LAYER
     // =========================================================================
-    function getEffectiveCreds() {
-      const url = (localStorage.getItem(LS.SB_URL) || SUPABASE_CONFIG.url || '').trim();
-      const key = (localStorage.getItem(LS.SB_KEY) || SUPABASE_CONFIG.anonKey || '').trim();
-      return { url, key };
+    async function apiDb(action, { id, payload } = {}) {
+      if (window.location.protocol === 'file:') {
+        return { ok: false, error: 'Local file mode' };
+      }
+      try {
+        const signal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+          ? AbortSignal.timeout(15000)
+          : undefined;
+        const res = await fetch('/api/db', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, id, payload }),
+          ...(signal ? { signal } : {})
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.ok) {
+          return { ok: false, error: json.error || `HTTP ${res.status}` };
+        }
+        return { ok: true, data: json.data };
+      } catch (err) {
+        return { ok: false, error: err?.message || 'Network error' };
+      }
     }
 
     async function initStorage() {
-      const { url, key } = getEffectiveCreds();
-      if (url && key && window.supabase) {
+      if (window.location.protocol !== 'file:') {
         try {
-          sb = window.supabase.createClient(url, key);
-          const { data, error } = await sb.from('athletes').select('*').order('created_at', { ascending: true });
-          if (error) throw error;
-          isSupabaseLive = true;
-          athletes = data || [];
-          await fetchAllChildTablesFromSupabase();
-          updateConnectionUI(true);
-          return;
+          const signal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+            ? AbortSignal.timeout(15000)
+            : undefined;
+          const res = await fetch('/api/db', {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+            ...(signal ? { signal } : {})
+          });
+          const json = await res.json().catch(() => ({}));
+          if (json?.status) backendStatus = { ...backendStatus, ...json.status };
+
+          if (res.ok && json.ok) {
+            isSupabaseLive = true;
+            athletes = json.athletes || [];
+            metricsByAthlete = {};
+            workoutsByAthlete = {};
+            athletes.forEach(a => { metricsByAthlete[a.id] = []; workoutsByAthlete[a.id] = []; });
+            (json.daily_metrics || []).forEach(m => {
+              if (!metricsByAthlete[m.athlete_id]) metricsByAthlete[m.athlete_id] = [];
+              metricsByAthlete[m.athlete_id].push(m);
+            });
+            (json.workouts || []).forEach(w => {
+              if (!workoutsByAthlete[w.athlete_id]) workoutsByAthlete[w.athlete_id] = [];
+              workoutsByAthlete[w.athlete_id].push(w);
+            });
+            updateConnectionUI(true, backendStatus);
+            return;
+          }
         } catch (err) {
-          console.error('Supabase init failed:', err);
-          isSupabaseLive = false;
-          sb = null;
+          console.warn('Auto Supabase backend init failed:', err?.message || err);
         }
       }
-      updateConnectionUI(false);
+      isSupabaseLive = false;
+      updateConnectionUI(false, backendStatus);
       loadLocalStorage();
     }
 
-    async function fetchAllChildTablesFromSupabase() {
-      metricsByAthlete = {};
-      workoutsByAthlete = {};
-      athletes.forEach(a => { metricsByAthlete[a.id] = []; workoutsByAthlete[a.id] = []; });
-      if (athletes.length === 0) return;
-
-      const [{ data: mData }, { data: wData }] = await Promise.all([
-        sb.from('daily_metrics').select('*').order('metric_date', { ascending: false }),
-        sb.from('workouts').select('*').order('workout_date', { ascending: false })
-      ]);
-
-      (mData || []).forEach(m => {
-        if (!metricsByAthlete[m.athlete_id]) metricsByAthlete[m.athlete_id] = [];
-        metricsByAthlete[m.athlete_id].push(m);
-      });
-      (wData || []).forEach(w => {
-        if (!workoutsByAthlete[w.athlete_id]) workoutsByAthlete[w.athlete_id] = [];
-        workoutsByAthlete[w.athlete_id].push(w);
-      });
+    async function refreshBackendSync() {
+      await initStorage();
+      const matched = athletes.find(a => a.id === activeAthleteId) || athletes.find(a => a.slug === getUrlSlug()) || athletes[0] || null;
+      activeAthleteId = matched?.id || null;
+      if (matched) setUrlSlug(matched.slug);
+      renderAll();
+      showToast(isSupabaseLive ? 'ซิงก์ข้อมูลจาก Supabase ล่าสุดแล้ว' : 'ไม่สามารถเชื่อมต่อ Supabase ได้ — ใช้ข้อมูล Local ชั่วคราว');
     }
 
     function loadLocalStorage() {
@@ -2318,26 +2142,49 @@ Body (หรือส่ง JSON จากแอป Health Auto Export ได้
       } catch (e) {}
     }
 
-    function updateConnectionUI(live) {
+    function setMiniStatusPill(pillId, dotId, ok, titleText, activeCls = 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300', dotCls = 'bg-emerald-400') {
+      const pill = document.getElementById(pillId);
+      const dot = document.getElementById(dotId);
+      if (!pill || !dot) return;
+      pill.title = titleText;
+      if (ok) {
+        pill.className = `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[11px] font-medium ${activeCls}`;
+        dot.className = `w-2 h-2 rounded-full ${dotCls}`;
+      } else {
+        pill.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] font-medium text-amber-300';
+        dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+      }
+    }
+
+    function updateConnectionUI(live, status = backendStatus) {
       const btn = document.getElementById('sb-status-btn');
       const dot = document.getElementById('sb-dot');
-      const txt = document.getElementById('sb-status-text');
-      const shortTxt = document.getElementById('sb-status-short');
-      const banner = document.getElementById('local-warning-banner');
+      const aiLabel = status.aiPrimary
+        ? `Gemini (${status.aiPrimaryModel})`
+        : (status.aiFallback ? `Ollama (${status.aiFallbackModel})` : 'Rule-Based');
 
-      if (live) {
-        btn.className = 'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-xs font-semibold text-emerald-300 transition-all active:scale-95';
-        dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-        txt.textContent = 'Supabase Connected';
-        shortTxt.textContent = 'Live';
-        banner.classList.add('hidden');
-      } else {
-        btn.className = 'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-xs font-semibold text-amber-300 transition-all active:scale-95';
-        dot.className = 'w-2 h-2 rounded-full bg-amber-400';
-        txt.textContent = 'ยังไม่เชื่อมต่อ Supabase';
-        shortTxt.textContent = 'ตั้งค่า DB';
-        banner.classList.remove('hidden');
+      if (btn && dot) {
+        if (live) {
+          btn.className = 'relative inline-flex items-center justify-center w-9 h-9 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 transition-all active:scale-95';
+          dot.className = 'absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse ring-2 ring-[#070b14]';
+          btn.title = `Supabase: เชื่อมต่ออัตโนมัติแล้ว • AI: ${aiLabel} • คลิกเพื่อซิงก์ล่าสุด`;
+        } else {
+          btn.className = 'relative inline-flex items-center justify-center w-9 h-9 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 transition-all active:scale-95';
+          dot.className = 'absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-[#070b14]';
+          btn.title = 'Supabase: ออฟไลน์ (โหมด Local) • คลิกเพื่อลองเชื่อมต่อใหม่';
+        }
       }
+
+      setMiniStatusPill('status-pill-db', 'status-dot-db', live, live ? 'Supabase: เชื่อมต่อแล้ว' : 'Supabase: ออฟไลน์');
+      setMiniStatusPill(
+        'status-pill-ai',
+        'status-dot-ai',
+        Boolean(status.aiPrimary || status.aiFallback),
+        `AI Coach: ${aiLabel}`,
+        'bg-cyan-500/10 border-cyan-500/30 text-cyan-300',
+        'bg-cyan-400'
+      );
+      setMiniStatusPill('status-pill-hook', 'status-dot-hook', Boolean(status.webhook), status.webhook ? 'Apple Health / Zepp Auto-Sync: พร้อมใช้งาน' : 'Auto-Sync: ยังไม่ตั้งค่า Server Env');
     }
 
     // =========================================================================
@@ -3055,9 +2902,9 @@ Body (หรือส่ง JSON จากแอป Health Auto Export ได้
       };
 
       let savedId = null;
-      if (isSupabaseLive && sb) {
-        const { data, error } = await sb.from('workouts').upsert(payload, { onConflict: 'external_id' }).select().single();
-        if (error) { showToast('บันทึกไม่สำเร็จ: ' + error.message); return; }
+      if (isSupabaseLive) {
+        const { ok, data, error } = await apiDb('upsert_workout', { payload });
+        if (!ok) { showToast('บันทึกไม่สำเร็จ: ' + error); return; }
         savedId = data.id;
         if (!workoutsByAthlete[ath.id]) workoutsByAthlete[ath.id] = [];
         workoutsByAthlete[ath.id] = [data, ...workoutsByAthlete[ath.id].filter(w => w.id !== data.id)];
@@ -3130,9 +2977,9 @@ Body (หรือส่ง JSON จากแอป Health Auto Export ได้
       };
 
       if (editId) {
-        if (isSupabaseLive && sb) {
-          const { data, error } = await sb.from('athletes').update(payload).eq('id', editId).select().single();
-          if (error) { showToast('อัปเดตไม่สำเร็จ: ' + error.message); return; }
+        if (isSupabaseLive) {
+          const { ok, data, error } = await apiDb('update_athlete', { id: editId, payload });
+          if (!ok) { showToast('อัปเดตไม่สำเร็จ: ' + error); return; }
           athletes[athletes.findIndex(a => a.id === editId)] = data;
         } else {
           const i = athletes.findIndex(a => a.id === editId);
@@ -3142,9 +2989,9 @@ Body (หรือส่ง JSON จากแอป Health Auto Export ได้
         if (activeAthleteId === editId) setUrlSlug(slug);
         showToast(`อัปเดตโปรไฟล์ ${payload.name} แล้ว`);
       } else {
-        if (isSupabaseLive && sb) {
-          const { data, error } = await sb.from('athletes').insert(payload).select().single();
-          if (error) { showToast('เพิ่มไม่สำเร็จ: ' + error.message); return; }
+        if (isSupabaseLive) {
+          const { ok, data, error } = await apiDb('create_athlete', { payload });
+          if (!ok) { showToast('เพิ่มไม่สำเร็จ: ' + error); return; }
           athletes.push(data);
           metricsByAthlete[data.id] = []; workoutsByAthlete[data.id] = [];
           activeAthleteId = data.id;
@@ -3164,9 +3011,9 @@ Body (หรือส่ง JSON จากแอป Health Auto Export ได้
 
     function askDeleteAthlete(id, name) {
       openConfirm(`ลบสมาชิก "${name}"?`, 'ประวัติการซ้อมและค่าสุขภาพของสมาชิกคนนี้จะถูกลบทั้งหมด', async () => {
-        if (isSupabaseLive && sb) {
-          const { error } = await sb.from('athletes').delete().eq('id', id);
-          if (error) { showToast('ลบไม่สำเร็จ: ' + error.message); return; }
+        if (isSupabaseLive) {
+          const { ok, error } = await apiDb('delete_athlete', { id });
+          if (!ok) { showToast('ลบไม่สำเร็จ: ' + error); return; }
         }
         athletes = athletes.filter(a => a.id !== id);
         delete metricsByAthlete[id]; delete workoutsByAthlete[id];
@@ -3203,17 +3050,17 @@ Body (หรือส่ง JSON จากแอป Health Auto Export ได้
       };
       aiAttemptedDailyKeys.delete(`${ath.id}:${payload.metric_date}`);
 
-      if (isSupabaseLive && sb) {
-        const { data, error } = await sb.from('daily_metrics').upsert(payload, { onConflict: 'athlete_id,metric_date' }).select().single();
-        if (error) { showToast('บันทึกไม่สำเร็จ: ' + error.message); return; }
+      if (isSupabaseLive) {
+        const { ok, data, error } = await apiDb('upsert_daily_metric', { payload });
+        if (!ok) { showToast('บันทึกไม่สำเร็จ: ' + error); return; }
         if (!metricsByAthlete[ath.id]) metricsByAthlete[ath.id] = [];
         metricsByAthlete[ath.id] = [data, ...metricsByAthlete[ath.id].filter(m => m.metric_date !== data.metric_date)]
-          .sort((a, b) => b.metric_date.localeCompare(a.metric_date));
+          .toSorted((a, b) => b.metric_date.localeCompare(a.metric_date));
       } else {
         payload.id = 'local-dm-' + Date.now();
         if (!metricsByAthlete[ath.id]) metricsByAthlete[ath.id] = [];
         metricsByAthlete[ath.id] = [payload, ...metricsByAthlete[ath.id].filter(m => m.metric_date !== payload.metric_date)]
-          .sort((a, b) => b.metric_date.localeCompare(a.metric_date));
+          .toSorted((a, b) => b.metric_date.localeCompare(a.metric_date));
         saveLocalStorage();
       }
       closeModal('modal-daily');
@@ -3254,9 +3101,9 @@ Body (หรือส่ง JSON จากแอป Health Auto Export ได้
       };
 
       let savedId = null;
-      if (isSupabaseLive && sb) {
-        const { data, error } = await sb.from('workouts').insert(payload).select().single();
-        if (error) { showToast('บันทึกไม่สำเร็จ: ' + error.message); return; }
+      if (isSupabaseLive) {
+        const { ok, data, error } = await apiDb('create_workout', { payload });
+        if (!ok) { showToast('บันทึกไม่สำเร็จ: ' + error); return; }
         savedId = data.id;
         if (!workoutsByAthlete[ath.id]) workoutsByAthlete[ath.id] = [];
         workoutsByAthlete[ath.id].unshift(data);
@@ -3277,65 +3124,15 @@ Body (หรือส่ง JSON จากแอป Health Auto Export ได้
     function askDeleteWorkout(id, title) {
       openConfirm('ลบรายการซ้อม?', `ต้องการลบ "${title}" ใช่หรือไม่?`, async () => {
         const ath = getActiveAthlete();
-        if (isSupabaseLive && sb) {
-          const { error } = await sb.from('workouts').delete().eq('id', id);
-          if (error) { showToast('ลบไม่สำเร็จ: ' + error.message); return; }
+        if (isSupabaseLive) {
+          const { ok, error } = await apiDb('delete_workout', { id });
+          if (!ok) { showToast('ลบไม่สำเร็จ: ' + error); return; }
         }
         workoutsByAthlete[ath.id] = (workoutsByAthlete[ath.id] || []).filter(w => w.id !== id);
         if (!isSupabaseLive) saveLocalStorage();
         renderAll();
         showToast('ลบรายการซ้อมแล้ว');
       });
-    }
-
-    function openSupabaseModal() {
-      const { url, key } = getEffectiveCreds();
-      document.getElementById('sb-in-url').value = url;
-      document.getElementById('sb-in-key').value = key;
-      document.getElementById('sb-msg').classList.add('hidden');
-      openModal('modal-supabase');
-    }
-
-    async function connectSupabase() {
-      const url = document.getElementById('sb-in-url').value.trim();
-      const key = document.getElementById('sb-in-key').value.trim();
-      const msg = document.getElementById('sb-msg');
-      if (!url || !key) {
-        msg.textContent = 'กรุณากรอก Supabase URL และ Anon Key';
-        msg.className = 'rounded-xl p-3 text-xs border bg-rose-500/15 border-rose-500/30 text-rose-300';
-        return;
-      }
-      msg.textContent = 'กำลังเชื่อมต่อ Supabase...';
-      msg.className = 'rounded-xl p-3 text-xs border bg-slate-800 border-slate-700 text-slate-300';
-      try {
-        const test = window.supabase.createClient(url, key);
-        const { error } = await test.from('athletes').select('id').limit(1);
-        if (error) throw error;
-        localStorage.setItem(LS.SB_URL, url);
-        localStorage.setItem(LS.SB_KEY, key);
-        await initStorage();
-        activeAthleteId = (athletes.find(a => a.slug === getUrlSlug()) || athletes[0])?.id || null;
-        if (activeAthleteId) setUrlSlug(getActiveAthlete().slug);
-        msg.textContent = '✅ เชื่อมต่อ Supabase สำเร็จ!';
-        msg.className = 'rounded-xl p-3 text-xs border bg-emerald-500/15 border-emerald-500/30 text-emerald-300';
-        renderAll();
-        showToast('เชื่อมต่อ Supabase สำเร็จ');
-      } catch (err) {
-        msg.textContent = '❌ เชื่อมต่อไม่สำเร็จ: ' + err.message;
-        msg.className = 'rounded-xl p-3 text-xs border bg-rose-500/15 border-rose-500/30 text-rose-300';
-      }
-    }
-
-    function disconnectSupabase() {
-      localStorage.removeItem(LS.SB_URL);
-      localStorage.removeItem(LS.SB_KEY);
-      sb = null; isSupabaseLive = false;
-      updateConnectionUI(false);
-      loadLocalStorage();
-      activeAthleteId = athletes[0]?.id || null;
-      closeModal('modal-supabase');
-      renderAll();
-      showToast('ตัดการเชื่อมต่อ Supabase แล้ว');
     }
 
     // =========================================================================
