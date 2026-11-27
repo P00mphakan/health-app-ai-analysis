@@ -1,6 +1,6 @@
 // api/ingest-health.js — รับข้อมูลสุขภาพรายวันจาก Zepp -> Apple Health ส่งเข้า Supabase + วิเคราะห์ AI อัตโนมัติ
-import { createClient } from '@supabase/supabase-js';
 import { runAiCoach } from './_lib/coach-engine.js';
+import { getSupabaseClient } from './_lib/supabase.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -10,16 +10,13 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return res.status(500).json({ error: 'Supabase environment variables are not configured' });
+  const sb = getSupabaseClient();
+  if (!sb) {
+    return res.status(503).json({ error: 'Supabase is not configured' });
   }
 
   const slug = (req.query.u || req.body?.slug || '').toLowerCase();
   if (!slug) return res.status(400).json({ error: 'Missing athlete slug (?u=pluk)' });
-
-  const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false }
-  });
 
   const { data: athlete, error: aErr } = await sb
     .from('athletes')

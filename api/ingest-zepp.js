@@ -5,9 +5,9 @@
 // 3. Apple Shortcuts / Health Auto Export / n8n webhooks
 // Automatically computes sex-differentiated Banister TRIMP, saves to Supabase,
 // and runs Gemini AI Coach analysis so ai_coach_report is ready immediately.
-import { createClient } from '@supabase/supabase-js';
 import FitParser from 'fit-file-parser';
 import { calcBanisterTRIMP, normalizeSportType, runAiCoach } from './_lib/coach-engine.js';
+import { getSupabaseClient } from './_lib/supabase.js';
 
 function parseFitBuffer(buffer) {
   return new Promise((resolve, reject) => {
@@ -128,13 +128,10 @@ export default async function handler(req, res) {
     return res.status(401).json({ ok: false, error: 'Unauthorized (invalid x-webhook-secret)' });
   }
 
-  const supabaseUrl = (process.env.SUPABASE_URL || '').trim();
-  const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
-  if (!supabaseUrl || !supabaseKey) {
-    return res.status(503).json({ ok: false, error: 'Supabase environment variables are not configured' });
+  const sb = getSupabaseClient();
+  if (!sb) {
+    return res.status(503).json({ ok: false, error: 'Supabase is not configured' });
   }
-
-  const sb = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
 
   // Resolve target athlete (by slug, athlete_id, or first athlete if only one exists)
   const slug = String(req.query.u || body.slug || '').trim().toLowerCase();

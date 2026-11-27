@@ -1,27 +1,21 @@
 // api/db.js — Vercel Serverless Backend for Automatic Supabase Connection
 // Uses server-side Environment Variables (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY)
 // so clients never need to enter or expose database credentials.
-import { createClient } from '@supabase/supabase-js';
 import { getGeminiConfig, getOllamaConfig } from './_lib/coach-engine.js';
+import { getSupabaseClient, getSupabaseConfig } from './_lib/supabase.js';
 
 function getBackendStatus(supabaseConnected) {
   const gemini = getGeminiConfig();
   const ollama = getOllamaConfig();
+  const sbCfg = getSupabaseConfig();
   return {
     supabase: Boolean(supabaseConnected),
     aiPrimary: Boolean(gemini.apiKey),
     aiPrimaryModel: gemini.model,
     aiFallback: Boolean(ollama.url),
     aiFallbackModel: ollama.model,
-    webhook: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)
+    webhook: Boolean(sbCfg.url && sbCfg.key)
   };
-}
-
-function getSupabaseClient() {
-  const url = (process.env.SUPABASE_URL || '').trim();
-  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
-  if (!url || !key) return null;
-  return createClient(url, key, { auth: { persistSession: false } });
 }
 
 function pickFields(obj, allowedKeys) {
