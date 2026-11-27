@@ -431,6 +431,28 @@
                 </div>
                 <div id="karvonen-zones-box" class="grid grid-cols-5 gap-1.5 text-center"></div>
               </div>
+
+              <!-- Per-User Follow-Up AI Coach Chat (Daily Brief) -->
+              <div class="mt-4 pt-4 border-t border-slate-800/80 space-y-2.5">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-[11px] font-bold text-emerald-300 flex items-center gap-1.5">
+                    <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
+                    <span id="daily-chat-title">แชทถามโค้ชต่อ (เฉพาะโปรไฟล์นี้)</span>
+                  </span>
+                  <button onclick="clearCoachChat('daily')" class="text-[10px] text-slate-500 hover:text-slate-300">ล้างแชท</button>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  <button type="button" onclick="quickAskCoach('daily', 'วันนี้ควรวิ่งโซนไหนกี่นาที?')" class="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-[10px] text-slate-300 transition-all">วันนี้วิ่งโซนไหนดี?</button>
+                  <button type="button" onclick="quickAskCoach('daily', 'ตีแบดเย็นนี้ไหวไหม?')" class="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-[10px] text-slate-300 transition-all">ตีแบดเย็นนี้ไหวไหม?</button>
+                  <button type="button" onclick="quickAskCoach('daily', 'ลด ACWR ยังไงให้ปลอดภัย?')" class="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-[10px] text-slate-300 transition-all">ลด ACWR ยังไงดี?</button>
+                  <button type="button" onclick="quickAskCoach('daily', 'สรุปฟอร์ม 7 วันล่าสุดให้หน่อย')" class="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-[10px] text-slate-300 transition-all">สรุปฟอร์ม 7 วัน</button>
+                </div>
+                <div id="daily-chat-thread" class="hidden max-h-48 overflow-y-auto space-y-2 rounded-2xl bg-slate-950/75 border border-slate-800 p-3"></div>
+                <form id="daily-chat-form" onsubmit="handleCoachChatSubmit(event, 'daily')" class="flex gap-2">
+                  <input id="daily-chat-input" type="text" placeholder="ถามโค้ชต่อเกี่ยวกับข้อมูลของคุณ..." class="flex-1 bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white outline-none" />
+                  <button id="daily-chat-send" type="submit" class="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shrink-0 transition-all active:scale-95">ส่ง</button>
+                </form>
+              </div>
             </div>
           </div>
         </div>
@@ -963,6 +985,31 @@
 
       <div id="cr-body" class="space-y-3">
         <!-- Populated with 4 structured coaching blocks -->
+      </div>
+
+      <!-- Per-User Follow-Up AI Coach Chat (Workout Specific) -->
+      <div class="mt-4 pt-4 border-t border-slate-800 space-y-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
+            <i data-lucide="message-circle" class="w-4 h-4"></i>
+            <span id="cr-chat-title">แชทถามโค้ชต่อเกี่ยวกับเซสชันนี้</span>
+          </span>
+          <button type="button" onclick="clearCoachChat('modal')" class="text-[10px] text-slate-500 hover:text-slate-300">ล้างแชท</button>
+        </div>
+
+        <div class="flex flex-wrap gap-1.5">
+          <button type="button" onclick="quickAskCoach('modal', 'พรุ่งนี้ควรซ้อมอะไรต่อดี?')" class="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-[10px] text-slate-300 transition-all">พรุ่งนี้ซ้อมอะไรต่อดี?</button>
+          <button type="button" onclick="quickAskCoach('modal', 'ทำไม HR เซสชันนี้เป็นแบบนี้ ต้องปรับโซนยังไง?')" class="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-[10px] text-slate-300 transition-all">วิเคราะห์ HR เพิ่ม</button>
+          <button type="button" onclick="quickAskCoach('modal', 'จัดตารางฟื้นฟู 48 ชม. หลังซ้อมนี้ให้หน่อย')" class="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-[10px] text-slate-300 transition-all">แผนฟื้นฟู 48 ชม.</button>
+          <button type="button" onclick="quickAskCoach('modal', 'หลังซ้อมนี้ควรกินอะไรฟื้นตัวดี?')" class="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-[10px] text-slate-300 transition-all">กินอะไรฟื้นตัวดี?</button>
+        </div>
+
+        <div id="cr-chat-thread" class="hidden max-h-52 overflow-y-auto space-y-2 rounded-2xl bg-slate-950/80 border border-slate-800 p-3"></div>
+
+        <form id="cr-chat-form" onsubmit="handleCoachChatSubmit(event, 'modal')" class="flex gap-2">
+          <input id="cr-chat-input" type="text" placeholder="พิมพ์ถามโค้ชต่อเกี่ยวกับ Workout นี้..." class="flex-1 bg-slate-950 border border-slate-700 focus:border-cyan-500 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none" />
+          <button id="cr-chat-send" type="submit" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-bold text-xs shrink-0 transition-all active:scale-95">ส่งคำถาม</button>
+        </form>
       </div>
 
       <div class="mt-5 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
@@ -2033,6 +2080,7 @@
         const json = await res.json();
         return {
           provider: json?.provider || 'rule-based-fallback',
+          reason: json?.reason || null,
           data: json?.data ?? null
         };
       } catch (err) {
@@ -2154,7 +2202,13 @@
         }
       } else if (activeAthleteId === ath.id && currentTab === 'dashboard') {
         applyDailyBriefToUI(fallbackDaily, fallbackDaily.verdictCls, 'rule-based', false, true);
-        if (force) showToast('AI Coach ไม่พร้อมใช้งาน — ใช้ Rule-Based Engine แทน');
+        if (force) {
+          showToast(
+            result.reason === 'missing_api_key'
+              ? 'ยังไม่ได้เพิ่ม GEMINI_API_KEY บน Vercel — ใช้ Rule-Based Engine แทน (ยังแชทถามโค้ชต่อได้ด้านล่าง)'
+              : 'AI Coach ไม่พร้อมใช้งาน — ใช้ Rule-Based Engine แทน'
+          );
+        }
       }
     }
 
@@ -2259,7 +2313,13 @@
         if (force) showToast(`อัปเดตบทวิเคราะห์โค้ชจาก ${result.provider} แล้ว`);
       } else {
         applyWorkoutReportToTargets(workout, ath, fallbackView, false, target);
-        if (force) showToast('AI Coach ไม่พร้อมใช้งาน — ใช้ Rule-Based Engine แทน');
+        if (force) {
+          showToast(
+            result.reason === 'missing_api_key'
+              ? 'ยังไม่ได้เพิ่ม GEMINI_API_KEY บน Vercel — ใช้ Rule-Based Engine แทน (แชทถามโค้ชต่อได้ด้านล่าง)'
+              : 'AI Coach ไม่พร้อมใช้งาน — ใช้ Rule-Based Engine แทน'
+          );
+        }
       }
     }
 
@@ -2683,6 +2743,7 @@
       // 3. Daily Coach Brief (4 Blunt Blocks — AI Coach + Supabase Cache + Rule-Based Fallback)
       const daily = generateDailyCoachAnalysis(ath, latestMetric, base14, latestPmc, readiness);
       resolveDailyCoachWithAI(ath, latestMetric, base14, latestPmc, readiness, daily, false);
+      renderCoachChatUI('daily');
 
       // Karvonen 5 Zones
       const zones = calcKarvonenZones(ath);
@@ -3038,6 +3099,7 @@
       document.getElementById('cr-meta').textContent = `${ath.name} • ${formatThaiDate(w.workout_date)} • ${w.duration_min} นาที • TRIMP ${rep.trimp}`;
       openModal('modal-coach-report');
       resolveWorkoutCoachWithAI(w, ath, fullTimeline, 'modal', false);
+      renderCoachChatUI('modal');
     }
 
     function copyLatestWorkoutReport() {
@@ -3575,15 +3637,180 @@
       copyText(url, `คัดลอกลิงก์ส่วนตัวของ ${ath.name} (?u=${ath.slug}) แล้ว`);
     }
 
+    // =========================================================================
+    // 10B. PER-USER AI COACH FOLLOW-UP CHAT (DAILY & POST-WORKOUT)
+    // =========================================================================
+    const coachChatThreads = {};
+    let coachChatSending = false;
+
+    function getCoachChatThreadKey(scope) {
+      const ath = getActiveAthlete();
+      if (!ath) return null;
+      return scope === 'modal' ? `workout:${ath.id}:${activeModalWorkoutId || 'none'}` : `daily:${ath.id}`;
+    }
+
+    function renderCoachChatUI(scope) {
+      const ath = getActiveAthlete();
+      const key = getCoachChatThreadKey(scope);
+      const threadEl = document.getElementById(scope === 'modal' ? 'cr-chat-thread' : 'daily-chat-thread');
+      const titleEl = document.getElementById(scope === 'modal' ? 'cr-chat-title' : 'daily-chat-title');
+      const inputEl = document.getElementById(scope === 'modal' ? 'cr-chat-input' : 'daily-chat-input');
+      if (!threadEl || !ath) return;
+
+      if (titleEl) {
+        titleEl.textContent = scope === 'modal'
+          ? `แชทถามโค้ชต่อ (${ath.name})`
+          : `แชทถามโค้ชต่อ (${ath.name})`;
+      }
+      if (inputEl) {
+        inputEl.placeholder = scope === 'modal'
+          ? `ถามโค้ชต่อเกี่ยวกับ Workout นี้ของ ${ath.name}...`
+          : `ถามโค้ชต่อเกี่ยวกับข้อมูลของ ${ath.name}...`;
+      }
+
+      const messages = coachChatThreads[key] || [];
+      if (messages.length === 0) {
+        threadEl.classList.add('hidden');
+        threadEl.replaceChildren();
+        return;
+      }
+
+      threadEl.classList.remove('hidden');
+      const nodes = messages.map((msg) => {
+        const wrap = document.createElement('div');
+        wrap.className = msg.role === 'user' ? 'flex justify-end' : 'flex justify-start';
+
+        const bubble = document.createElement('div');
+        bubble.className = msg.role === 'user'
+          ? 'max-w-[85%] rounded-2xl rounded-br-sm bg-emerald-500/20 border border-emerald-500/35 px-3 py-2 text-xs text-emerald-100 whitespace-pre-line leading-relaxed'
+          : 'max-w-[92%] rounded-2xl rounded-bl-sm bg-slate-900 border border-slate-700/90 px-3 py-2 text-xs text-slate-200 whitespace-pre-line leading-relaxed';
+
+        if (msg.role === 'assistant' && msg.providerLabel) {
+          const meta = document.createElement('div');
+          meta.className = 'text-[9.5px] font-num font-semibold text-cyan-400 mb-1';
+          meta.textContent = msg.providerLabel;
+          bubble.appendChild(meta);
+        }
+
+        const textNode = document.createElement('div');
+        textNode.textContent = msg.content;
+        bubble.appendChild(textNode);
+
+        wrap.appendChild(bubble);
+        return wrap;
+      });
+
+      threadEl.replaceChildren(...nodes);
+      threadEl.scrollTop = threadEl.scrollHeight;
+    }
+
+    function clearCoachChat(scope) {
+      const key = getCoachChatThreadKey(scope);
+      if (!key) return;
+      coachChatThreads[key] = [];
+      renderCoachChatUI(scope);
+    }
+
+    function quickAskCoach(scope, question) {
+      const inputEl = document.getElementById(scope === 'modal' ? 'cr-chat-input' : 'daily-chat-input');
+      if (inputEl) inputEl.value = question;
+      sendCoachChatMessage(scope, question);
+    }
+
+    function handleCoachChatSubmit(e, scope) {
+      e.preventDefault();
+      const inputEl = document.getElementById(scope === 'modal' ? 'cr-chat-input' : 'daily-chat-input');
+      if (!inputEl) return;
+      const text = inputEl.value.trim();
+      if (!text) return;
+      inputEl.value = '';
+      sendCoachChatMessage(scope, text);
+    }
+
+    async function sendCoachChatMessage(scope, messageText) {
+      const ath = getActiveAthlete();
+      const key = getCoachChatThreadKey(scope);
+      if (!ath || !key || coachChatSending) return;
+
+      const sendBtn = document.getElementById(scope === 'modal' ? 'cr-chat-send' : 'daily-chat-send');
+      if (!coachChatThreads[key]) coachChatThreads[key] = [];
+      const historyBefore = coachChatThreads[key].map(({ role, content }) => ({ role, content }));
+
+      coachChatThreads[key].push({ role: 'user', content: messageText });
+      coachChatThreads[key].push({ role: 'assistant', content: 'โค้ชกำลังวิเคราะห์คำตอบ...', providerLabel: 'Coach AI' });
+      renderCoachChatUI(scope);
+
+      coachChatSending = true;
+      if (sendBtn) sendBtn.disabled = true;
+
+      try {
+        const metrics = metricsByAthlete[ath.id] || [];
+        const workouts = (workoutsByAthlete[ath.id] || []).toSorted(compareWorkoutsDesc);
+        const fullTimeline = buildFullDailyTimeline(ath, metrics, workouts);
+        const latestMetric = metrics[0] || null;
+        const latestPmc = fullTimeline.length ? fullTimeline[fullTimeline.length - 1] : null;
+        const activeWorkout = scope === 'modal'
+          ? workouts.find(x => x.id === activeModalWorkoutId) || null
+          : workouts[0] || null;
+        const activeReport = scope === 'modal'
+          ? (activeWorkout?.ai_coach_report || (activeWorkout ? generatePostWorkoutCoach(activeWorkout, ath, fullTimeline) : null))
+          : (latestMetric?.ai_daily_brief || null);
+
+        const res = await fetch('/api/coach', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(25000),
+          body: JSON.stringify({
+            mode: 'chat',
+            athlete: ath,
+            metrics: latestMetric,
+            pmc: latestPmc,
+            workout: activeWorkout,
+            recentWorkouts: workouts.slice(0, 7),
+            report: activeReport,
+            history: historyBefore,
+            message: messageText
+          })
+        });
+
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.reply) {
+          throw new Error(json.error || `HTTP ${res.status}`);
+        }
+
+        const providerLabel = json.provider?.startsWith('google:')
+          ? `AI: ${json.provider.replace('google:', '')}`
+          : (json.provider?.startsWith('ollama-cf:')
+            ? `Ollama: ${json.provider.replace('ollama-cf:', '')}`
+            : 'Coach Engine (เพิ่ม GEMINI_API_KEY เพื่อเปิด Gemini AI)');
+
+        coachChatThreads[key][coachChatThreads[key].length - 1] = {
+          role: 'assistant',
+          content: json.reply,
+          providerLabel
+        };
+      } catch (err) {
+        coachChatThreads[key][coachChatThreads[key].length - 1] = {
+          role: 'assistant',
+          content: `ไม่สามารถเชื่อมต่อโค้ชได้ชั่วคราว (${err?.message || 'Network error'}) กรุณาลองใหม่อีกครั้ง`,
+          providerLabel: 'Error'
+        };
+      } finally {
+        coachChatSending = false;
+        if (sendBtn) sendBtn.disabled = false;
+        renderCoachChatUI(scope);
+      }
+    }
+
     function showToast(msg) {
       const t = document.getElementById('toast');
-      const isErr = /ไม่สำเร็จ|error|ผิดพลาด|ไม่พบ/i.test(String(msg || ''));
+      const isErr = /ไม่สำเร็จ|ไม่พร้อม|ยังไม่ได้เพิ่ม|error|ผิดพลาด|ไม่พบ/i.test(String(msg || ''));
       t.className = isErr
-        ? 'fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-2xl bg-rose-500 text-white font-bold text-xs shadow-2xl'
+        ? 'fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-2xl bg-amber-500 text-slate-950 font-bold text-xs shadow-2xl'
         : 'fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-500 text-slate-950 font-bold text-xs shadow-2xl';
       document.getElementById('toast-text').textContent = msg;
       clearTimeout(window._tt);
-      window._tt = setTimeout(() => { t.classList.add('hidden'); t.classList.remove('flex'); }, isErr ? 4200 : 2800);
+      window._tt = setTimeout(() => { t.classList.add('hidden'); t.classList.remove('flex'); }, isErr ? 4500 : 2800);
     }
 
     // =========================================================================
