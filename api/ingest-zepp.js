@@ -1,122 +1,19 @@
 // api/ingest-zepp.js — Zepp / Amazfit Cloud Bridge API
-// Accepts native .FIT binary (base64), .GPX XML, or structured JSON from:
-// 1. Local Python Zepp Bridge (zepp-bridge/server.py watching Zepp iCloud FITs)
-// 2. Direct .FIT upload from the ATHLETE OS web app (preview or save)
-// 3. Apple Shortcuts / Health Auto Export / n8n webhooks
-// Automatically computes sex-differentiated Banister TRIMP, saves to Supabase,
-// and runs Gemini AI Coach analysis so ai_coach_report is ready immediately.
-import FitParser from 'fit-file-parser';
+// Accepts native .FIT binary (base64) or structured JSON from:
+// 1. Direct .FIT upload from ATHLETE OS web app (preview or bulk import)
+// 2. Local Python Zepp Bridge (zepp-bridge/server.py)
+// 3. iPhone Apple Shortcuts (supports per-user isolated token ?u=<slug>&token=<token>)
+// Extracts rich Amazfit/Zepp .FIT telemetry (calories, Aerobic/Anaerobic TE, EPOC Load, Power, Cadence, Elevation),
+// smart-fuses with Apple Health (zero duplicates), and triggers Gemini AI Coach automatically.
 import { calcBanisterTRIMP, normalizeSportType, runAiCoach } from './_lib/coach-engine.js';
 import { getSupabaseClient } from './_lib/supabase.js';
-
-function parseFitBuffer(buffer) {
-  return new Promise((resolve, reject) => {
-    const parser = new FitParser({
-      force: true,
-      speedUnit: 'km/h',
-      lengthUnit: 'm',
-      temperatureUnit: 'celsius',
-      elapsedRecordField: true,
-      mode: 'list'
-    });
-    parser.parse(buffer, (error, data) => {
-      if (error) reject(error);
-      else resolve(data);
-    });
-  });
-}
-
-function toIsoDate(dt) {
-  if (!dt) return new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
-  const d = dt instanceof Date ? dt : new Date(dt);
-  if (Number.isNaN(d.getTime())) {
-    return new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
-  }
-  return new Date(d.getTime() + 7 * 3600 * 1000).toISOString().slice(0, 10);
-}
-
-function extractFitWorkout(parsed, filename, athlete) {
-  const session = parsed?.sessions?.[0] || null;
-  const records = Array.isArray(parsed?.records) ? parsed.records : [];
-  const stem = String(filename || 'zepp_workout').replace(/\.fit$/i, '');
-
-  let durationMin = 0;
-  let distanceKm = 0;
-  let avgHr = 0;
-  let maxHr = 0;
-  let avgPower = 0;
-  let cadence = 0;
-  let elevationGain = 0;
-  let rawSport = 'running';
-  let displaySport = 'running';
-  let startTime = null;
-
-  if (session) {
-    startTime = session.start_time || session.timestamp || null;
-    durationMin = +(((session.total_timer_time || session.total_elapsed_time || 0)) / 60).toFixed(2);
-    // lengthUnit is 'm' so distance is in meters and total_ascent stays in exact meters
-    distanceKm = +(Number(session.total_distance || 0) / 1000).toFixed(2);
-    avgHr = Math.round(Number(session.avg_heart_rate || 0));
-    maxHr = Math.round(Number(session.max_heart_rate || 0));
-    avgPower = Math.round(Number(session.avg_power || 0));
-    const rawCad = Number(session.avg_running_cadence || session.avg_cadence || 0);
-    cadence = rawCad > 0 && rawCad < 110 ? Math.round(rawCad * 2) : Math.round(rawCad);
-    elevationGain = +(Number(session.total_ascent || 0)).toFixed(1);
-    const sp = String(session.sport || '').trim();
-    const sub = String(session.sub_sport || '').trim();
-    rawSport = `${sp} ${sub}`.trim() || 'running';
-    displaySport = sub && sub.toLowerCase() !== 'generic' && sub.toLowerCase() !== 'street' ? sub : (sp || 'running');
-  } else if (records.length > 0) {
-    startTime = records[0].timestamp || null;
-    const endTime = records[records.length - 1].timestamp || null;
-    if (startTime && endTime) {
-      durationMin = Math.max(1, +((new Date(endTime) - new Date(startTime)) / 60000).toFixed(2));
-    } else {
-      durationMin = +(records.length / 60).toFixed(2);
-    }
-    const lastDist = [...records].reverse().find((r) => typeof r.distance === 'number')?.distance || 0;
-    distanceKm = +(Number(lastDist) / 1000).toFixed(2);
-    const hrs = records.map((r) => Number(r.heart_rate)).filter((v) => v > 30 && v < 230);
-    if (hrs.length) {
-      avgHr = Math.round(hrs.reduce((a, b) => a + b, 0) / hrs.length);
-      maxHr = Math.max(...hrs);
-    }
-  }
-
-  if (avgHr <= 0) avgHr = (Number(athlete?.resting_hr) || 55) + 70;
-  if (durationMin <= 0) durationMin = 1;
-
-  const sportType = normalizeSportType(rawSport);
-  const workoutDate = toIsoDate(startTime);
-  const niceSport = displaySport.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-  const trimp = calcBanisterTRIMP(durationMin, avgHr, athlete);
-
-  return {
-    athlete_id: athlete.id,
-    external_id: `fit_${athlete.slug}_${stem}`,
-    workout_date: workoutDate,
-    sport_type: sportType,
-    title: `Zepp ${niceSport} (${stem})`,
-    duration_min: durationMin,
-    distance_km: distanceKm,
-    avg_hr: avgHr,
-    max_hr: maxHr,
-    avg_power: avgPower,
-    cadence,
-    elevation_gain: elevationGain,
-    rpe: 7,
-    trimp,
-    source: 'zepp_fit_bridge'
-  };
-}
-
-function isSameOriginWebRequest(req) {
-  const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toLowerCase();
-  const origin = (req.headers.origin || '').toLowerCase();
-  const referer = (req.headers.referer || '').toLowerCase();
-  if (!host) return false;
-  return origin.includes(host) || referer.includes(host);
-}
+import {
+  extractFitWorkout,
+  parseFitBuffer,
+  toThaiIsoDate,
+  upsertMergedWorkout,
+  verifyUserSyncAuth
+} from './_lib/sync-utils.js';
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -125,12 +22,12 @@ export default async function handler(req, res) {
   }
 
   const body = req.body || {};
-  const secret = req.headers['x-webhook-secret'] || req.query.secret || '';
-  const allowWebPreviewOrUpload =
-    (body.mode === 'preview' || body.source === 'web_fit_upload') && isSameOriginWebRequest(req);
+  const slug = String(req.query.u || body.slug || '').trim().toLowerCase();
+  const allowSameOrigin = body.mode === 'preview' || body.source === 'web_fit_upload';
 
-  if (process.env.WEBHOOK_SECRET && !allowWebPreviewOrUpload && secret !== process.env.WEBHOOK_SECRET) {
-    return res.status(401).json({ ok: false, error: 'Unauthorized (invalid x-webhook-secret)' });
+  const auth = verifyUserSyncAuth(req, slug, { allowSameOrigin });
+  if (!auth.ok) {
+    return res.status(401).json({ ok: false, error: auth.error });
   }
 
   const sb = getSupabaseClient();
@@ -138,10 +35,7 @@ export default async function handler(req, res) {
     return res.status(503).json({ ok: false, error: 'Supabase is not configured' });
   }
 
-  // Resolve target athlete (by slug, athlete_id, or first athlete if only one exists)
-  const slug = String(req.query.u || body.slug || '').trim().toLowerCase();
   const athleteId = body.athlete_id ? String(body.athlete_id).trim() : '';
-
   let athlete = null;
   if (athleteId) {
     const { data } = await sb.from('athletes').select('*').eq('id', athleteId).single();
@@ -159,55 +53,50 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Parse .FIT binary if provided
-    let workoutsToSave = [];
-    if (body.fit_base64) {
-      const buf = Buffer.from(String(body.fit_base64), 'base64');
-      const parsed = await parseFitBuffer(buf);
-      const extracted = extractFitWorkout(parsed, body.filename, athlete);
+    let entriesToSave = [];
 
-      // Apply optional user overrides from preview/web upload
-      if (body.sport_type) extracted.sport_type = normalizeSportType(body.sport_type);
-      if (body.avg_power != null && Number(body.avg_power) > 0) extracted.avg_power = Math.round(Number(body.avg_power));
-      if (body.rpe != null && Number(body.rpe) > 0) extracted.rpe = Math.round(Number(body.rpe));
-      if (body.title) extracted.title = String(body.title).trim();
-      if (body.source) extracted.source = String(body.source).trim();
+    if (body.fit_base64) {
+      const cleanB64 = String(body.fit_base64).replace(/\s+/g, '');
+      const parsed = await parseFitBuffer(Buffer.from(cleanB64, 'base64'));
+      const { base, extended } = extractFitWorkout(parsed, body.filename, athlete);
+
+      if (body.sport_type) base.sport_type = normalizeSportType(body.sport_type);
+      if (body.avg_power != null && Number(body.avg_power) > 0) base.avg_power = Math.round(Number(body.avg_power));
+      if (body.rpe != null && Number(body.rpe) > 0) base.rpe = Math.round(Number(body.rpe));
+      if (body.title) base.title = String(body.title).trim();
+      if (body.source) base.source = String(body.source).trim();
 
       if (body.mode === 'preview') {
-        return res.status(200).json({ ok: true, preview: extracted });
+        return res.status(200).json({ ok: true, preview: { ...base, ...extended } });
       }
-      workoutsToSave = [extracted];
+      entriesToSave = [{ base, extended }];
     } else if (Array.isArray(body.workouts)) {
-      workoutsToSave = body.workouts.map((w) => buildWorkoutRecord(w, athlete));
+      entriesToSave = body.workouts.map((w) => buildWorkoutEntry(w, athlete));
     } else if (body.duration_min != null || body.avg_hr != null || body.workout) {
-      workoutsToSave = [buildWorkoutRecord(body.workout || body, athlete)];
+      entriesToSave = [buildWorkoutEntry(body.workout || body, athlete)];
     } else {
       return res.status(400).json({ ok: false, error: 'Missing fit_base64 or workout payload' });
     }
 
     const shouldAnalyze = body.analyze !== false;
     const savedList = [];
+    let migrationNeeded = false;
 
-    for (const record of workoutsToSave) {
-      const { data: saved, error: upErr } = await sb
-        .from('workouts')
-        .upsert(record, { onConflict: 'external_id' })
-        .select()
-        .single();
-
-      if (upErr) {
-        return res.status(500).json({ ok: false, error: upErr.message });
+    for (const { base, extended } of entriesToSave) {
+      const up = await upsertMergedWorkout(sb, athlete, base, extended);
+      if (up.error) {
+        return res.status(500).json({ ok: false, error: up.error.message });
       }
+      if (up.schemaFallback) migrationNeeded = true;
 
-      let finalRow = saved;
+      let finalRow = up.data;
       let aiProvider = 'skipped';
 
-      // Auto-run Gemini AI Coach immediately if report is not yet cached
-      if (shouldAnalyze && !saved.ai_coach_report) {
+      if (shouldAnalyze && !finalRow.ai_coach_report) {
         const aiRes = await runAiCoach({
           mode: 'workout',
           athlete,
-          workout: saved,
+          workout: { ...finalRow, ...extended },
           pmc: body.pmc || null
         });
         aiProvider = aiRes.provider;
@@ -220,19 +109,21 @@ export default async function handler(req, res) {
           const { data: updated } = await sb
             .from('workouts')
             .update({ ai_coach_report: cachedReport })
-            .eq('id', saved.id)
+            .eq('id', finalRow.id)
             .select()
             .single();
           if (updated) finalRow = updated;
         }
       }
 
-      savedList.push({ workout: finalRow, ai_provider: aiProvider });
+      savedList.push({ workout: finalRow, ai_provider: aiProvider, merged: Boolean(up.merged) });
     }
 
     return res.status(200).json({
       ok: true,
       count: savedList.length,
+      merged: savedList.some((x) => x.merged),
+      migration_needed: migrationNeeded,
       saved: savedList.length === 1 ? savedList[0].workout : savedList.map((x) => x.workout),
       ai_provider: savedList[0]?.ai_provider || 'rule-based-fallback'
     });
@@ -242,14 +133,14 @@ export default async function handler(req, res) {
   }
 }
 
-function buildWorkoutRecord(w, athlete) {
+function buildWorkoutEntry(w, athlete) {
   const durationMin = Math.max(1, +(Number(w.duration_min) || 1).toFixed(2));
   const avgHr = Math.round(Number(w.avg_hr) || (Number(athlete.resting_hr) || 55) + 70);
-  const workoutDate = w.workout_date || toIsoDate(null);
+  const workoutDate = w.workout_date || toThaiIsoDate(null);
   const sportType = normalizeSportType(w.sport_type || w.sport);
   const trimp = Number(w.trimp) > 0 ? +Number(w.trimp).toFixed(1) : calcBanisterTRIMP(durationMin, avgHr, athlete);
 
-  return {
+  const base = {
     athlete_id: athlete.id,
     external_id: w.external_id || `zepp_${athlete.slug}_${workoutDate}_${Date.now()}`,
     workout_date: workoutDate,
@@ -266,4 +157,16 @@ function buildWorkoutRecord(w, athlete) {
     trimp,
     source: String(w.source || 'zepp_bridge')
   };
+
+  const extended = {
+    min_hr: Math.round(Number(w.min_hr) || 0),
+    max_power: Math.round(Number(w.max_power) || 0),
+    avg_speed_kmh: +(Number(w.avg_speed_kmh) || 0).toFixed(2),
+    total_calories: Math.round(Number(w.total_calories) || 0),
+    aerobic_te: +(Number(w.aerobic_te) || 0).toFixed(1),
+    anaerobic_te: +(Number(w.anaerobic_te) || 0).toFixed(1),
+    training_load_peak: Math.round(Number(w.training_load_peak) || 0)
+  };
+
+  return { base, extended };
 }

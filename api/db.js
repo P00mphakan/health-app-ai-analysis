@@ -3,6 +3,7 @@
 // so clients never need to enter or expose database credentials.
 import { getGeminiConfig, getOllamaConfig } from './_lib/coach-engine.js';
 import { getSupabaseClient, getSupabaseConfig } from './_lib/supabase.js';
+import { createUserSyncToken, getWebhookSecret, safeUpsertRow } from './_lib/sync-utils.js';
 
 function getBackendStatus(supabaseConnected) {
   const gemini = getGeminiConfig();
@@ -15,7 +16,8 @@ function getBackendStatus(supabaseConnected) {
     aiPrimaryModel: gemini.model,
     aiFallback: Boolean(ollama.url),
     aiFallbackModel: ollama.model,
-    webhook: Boolean(sbCfg.url && sbCfg.key)
+    webhook: Boolean(sbCfg.url && sbCfg.key),
+    webhookSecured: Boolean(getWebhookSecret())
   };
 }
 
@@ -106,11 +108,17 @@ export default async function handler(req, res) {
         });
       }
 
+      const athleteRows = athletes || [];
+      const syncTokens = Object.fromEntries(
+        athleteRows.map((a) => [a.slug, createUserSyncToken(a.slug)])
+      );
+
       return res.status(200).json({
         ok: true,
-        athletes: athletes || [],
+        athletes: athleteRows,
         daily_metrics: dailyMetrics || [],
         workouts: workouts || [],
+        syncTokens,
         status: getBackendStatus(true)
       });
     }
@@ -149,11 +157,8 @@ export default async function handler(req, res) {
 
       case 'upsert_daily_metric': {
         const record = pickFields(payload, DAILY_METRIC_FIELDS);
-        const { data, error } = await sb
-          .from('daily_metrics')
-          .upsert(record, { onConflict: 'athlete_id,metric_date' })
-          .select()
-          .single();
+        const ext = pickFields(payload, ['sleep_deep_min', 'sleep_rem_min', 'sleep_light_min', 'spo2']);
+        const { data, error } = await safeUpsertRow(sb, 'daily_metrics', record, ext, 'athlete_id,metric_date');
         if (error) return res.status(400).json({ ok: false, error: error.message });
         return res.status(200).json({ ok: true, data });
       }

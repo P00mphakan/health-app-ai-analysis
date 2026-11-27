@@ -104,14 +104,14 @@ export async function runAiCoach({ mode, athlete, metrics, workout, pmc }) {
           max_hr: athlete.max_hr,
           resting_hr: athlete.resting_hr
         })}
-ข้อมูล Workout: ${JSON.stringify(workout)}
+ข้อมูล Workout (รวมค่า .FIT เช่น Calories, Aerobic/Anaerobic TE, EPOC Load หากมี): ${JSON.stringify(workout)}
 ACWR หลังซ้อม: ${JSON.stringify(pmc)}
 
 ตอบเป็น JSON ที่มีคีย์ต่อไปนี้เท่านั้น:
 {
   "hrSection": "ประเมิน Heart Rate Zone ตรงไปตรงมา 1-2 บรรทัด",
-  "perfSection": "สรุป Performance (Pace, Power, W/kg, EF, TRIMP) 1 บรรทัด",
-  "tacticsSection": "วิเคราะห์ Tactics ลักษณะโหลด และชั่วโมงพักฟื้นที่แนะนำ 1-2 บรรทัด",
+  "perfSection": "สรุป Performance (Pace, Power, W/kg, EF, TRIMP, Calories, Aerobic/Anaerobic TE) 1 บรรทัด",
+  "tacticsSection": "วิเคราะห์ Tactics ลักษณะโหลด EPOC/TE และชั่วโมงพักฟื้นที่แนะนำ 1-2 บรรทัด",
   "nextDrill": "แนวทางฝึกฝนและปรับปรุงเซสชันถัดไป 2 ข้อสั้นๆ"
 }`;
 

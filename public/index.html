@@ -793,22 +793,42 @@
               </div>
             </div>
 
-            <!-- Zero-MacBook iPhone Auto-Sync Card -->
+            <!-- Zero-MacBook iPhone Apple Shortcuts Auto-Sync Card (Per-User Isolated) -->
             <div class="glass-card rounded-3xl p-5 space-y-3">
-              <div>
-                <h3 class="font-display text-sm font-bold text-white flex items-center gap-2">
-                  <i data-lucide="smartphone" class="w-4 h-4 text-cyan-400"></i>
-                  <span>Auto-Sync จาก iPhone (ไม่ต้องเปิด Mac)</span>
-                </h3>
-                <p class="text-[11px] text-slate-400 mt-1">ตั้งค่าในแอป <strong>Health Auto Export</strong> หรือ <strong>Apple Shortcuts</strong> ชี้มาที่ URL ด้านล่าง URL เดียว ได้ครบทั้ง Sleep / HRV / RHR และ Workouts อัตโนมัติทุกวัน</p>
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <h3 class="font-display text-sm font-bold text-white flex items-center gap-2">
+                    <i data-lucide="smartphone" class="w-4 h-4 text-cyan-400"></i>
+                    <span>Auto-Sync iPhone (Apple Shortcuts)</span>
+                  </h3>
+                  <p class="text-[11px] text-slate-400 mt-1">ไม่ต้องเปิด MacBook • ดึงการนอน (Sleep/Deep/REM), HRV, RHR, ก้าวเดิน และไฟล์ <code class="font-num text-cyan-300">.FIT</code> ผสานอัตโนมัติแยกตามโปรไฟล์</p>
+                </div>
+                <span id="iphone-sync-user-badge" class="px-2 py-0.5 rounded-full text-[10px] font-num font-bold bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 shrink-0">?u=--</span>
               </div>
+
               <div class="rounded-xl bg-slate-950 border border-slate-800 p-3 space-y-2">
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] text-slate-400">Personal Webhook URL (POST):</span>
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-[10px] text-slate-400">Personal Sync URL (เฉพาะโปรไฟล์นี้):</span>
                   <button onclick="copyIphoneWebhookUrl()" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold">คัดลอก URL</button>
                 </div>
                 <code id="iphone-webhook-url" class="block font-num text-[10px] text-cyan-300 break-all">--</code>
               </div>
+
+              <details class="rounded-xl bg-slate-950/70 border border-slate-800/90 p-3 text-[11px] text-slate-300">
+                <summary class="cursor-pointer font-semibold text-cyan-300 select-none">วิธีตั้ง Apple Shortcuts บน iPhone (ทำครั้งเดียว ซิงก์ทันทีทุกวัน)</summary>
+                <ol class="list-decimal list-inside space-y-1.5 mt-2.5 text-[11px] text-slate-300 leading-relaxed">
+                  <li>เปิดแอป <strong>คำสั่งลัด (Shortcuts)</strong> → สร้าง Shortcut ใหม่ชื่อ <code class="font-num text-emerald-300">Sync ATHLETE OS</code></li>
+                  <li>เพิ่ม Action <strong>ค้นหาตัวอย่างสุขภาพ (Find Health Samples)</strong> ของ 1 วันล่าสุด: <span class="text-slate-200">การวิเคราะห์การนอน (Sleep Analysis), HRV, อัตราการเต้นหัวใจขณะพัก (RHR), น้ำหนัก, ก้าวเดิน</span></li>
+                  <li><em>(เสริมสำหรับ .FIT)</em> เพิ่ม <strong>รับไฟล์จากโฟลเดอร์ (Get Contents of Folder)</strong> → <code class="font-num text-cyan-300">iCloud Drive/Zepp/FITs</code> เรียงตามวันที่แก้ไขล่าสุด → เอาไฟล์แรก → <strong>เข้ารหัส Base64</strong></li>
+                  <li>เพิ่ม Action <strong>รับเนื้อหาของ URL (Get Contents of URL)</strong> → วาง URL ส่วนตัวด้านบน → เมธอด <strong>POST</strong> → เนื้อหา <strong>JSON</strong> (กดคัดลอกคีย์ JSON ด้านล่าง)</li>
+                  <li>ไปแท็บ <strong>การทำงานอัตโนมัติ (Automation)</strong> เพิ่ม 2 ตัว (เลือก <em>รันทันที / Run Immediately</em>):
+                    <div class="mt-1 pl-3 text-emerald-300/90">• <strong>เมื่อปิดแอป Zepp</strong> → รัน <code class="font-num">Sync ATHLETE OS</code> (อัพเดตทันทีหลังซิงก์นาฬิกา)</div>
+                    <div class="pl-3 text-emerald-300/90">• <strong>เวลาของวัน 07:30 น. ทุกวัน</strong> → รัน <code class="font-num">Sync ATHLETE OS</code> (ดึงการนอน + HRV เช้านี้)</div>
+                  </li>
+                </ol>
+                <button onclick="copyShortcutsJsonTemplate()" class="mt-2.5 w-full py-2 px-3 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-[11px] font-bold text-cyan-300">คัดลอกโครงสร้าง JSON สำหรับ Apple Shortcuts</button>
+              </details>
+
               <div class="space-y-2">
                 <label class="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 border border-emerald-500/30 text-emerald-300 font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95">
                   <i data-lucide="file-json" class="w-4 h-4"></i>
@@ -1231,8 +1251,11 @@
       aiPrimaryModel: 'gemini-2.5-flash',
       aiFallback: false,
       aiFallbackModel: 'qwen2.5:14b',
-      webhook: false
+      webhook: false,
+      webhookSecured: false
     };
+    let syncTokensBySlug = {};
+    let lastSilentSyncAt = 0;
     let athletes = [];
     let metricsByAthlete = {};
     let workoutsByAthlete = {};
@@ -1724,6 +1747,11 @@
       }
       if (Number(workout.avg_power) > 0) perfParts.push(`Power ${workout.avg_power} W (${wkg} W/kg)`);
       if (ef.val > 0) perfParts.push(`EF ${ef.val} ${ef.unit}`);
+      if (Number(workout.total_calories) > 0) perfParts.push(`${workout.total_calories} kcal`);
+      if (Number(workout.aerobic_te) > 0 || Number(workout.anaerobic_te) > 0) {
+        perfParts.push(`TE ${workout.aerobic_te || 0}/${workout.anaerobic_te || 0}`);
+      }
+      if (Number(workout.training_load_peak) > 0) perfParts.push(`EPOC ${workout.training_load_peak}`);
       perfParts.push(`TRIMP ${trimp} (${athlete.sex === 'female' ? 'หญิง' : 'ชาย'})`);
       const perfSection = perfParts.join(' • ');
 
@@ -2199,6 +2227,10 @@
         ef: ef.val > 0 ? `${ef.val} ${ef.unit}` : null,
         cadence: workout.cadence,
         elevation_gain: workout.elevation_gain,
+        total_calories: workout.total_calories || 0,
+        aerobic_te: workout.aerobic_te || 0,
+        anaerobic_te: workout.anaerobic_te || 0,
+        training_load_peak: workout.training_load_peak || 0,
         rpe: workout.rpe,
         trimp: fallbackRep.trimp
       };
@@ -2308,6 +2340,7 @@
           });
           const json = await res.json().catch(() => ({}));
           if (json?.status) backendStatus = { ...backendStatus, ...json.status };
+          if (json?.syncTokens) syncTokensBySlug = json.syncTokens;
 
           if (res.ok && json.ok) {
             isSupabaseLive = true;
@@ -2593,9 +2626,13 @@
       } else {
         liq.setAttribute('opacity', '1');
         scoreEl.textContent = readiness;
+        const sleepExtras = [];
+        if (latestMetric?.sleep_deep_min > 0) sleepExtras.push(`Deep ${latestMetric.sleep_deep_min}น.`);
+        if (latestMetric?.sleep_rem_min > 0) sleepExtras.push(`REM ${latestMetric.sleep_rem_min}น.`);
+        if (latestMetric?.spo2 > 0) sleepExtras.push(`SpO2 ${latestMetric.spo2}%`);
         dateSub.textContent = isLoadEstimated
           ? `ประเมินจากโหลดซ้อม (${formatThaiDate(latestPmc.date)}) • เพิ่ม Sleep/HRV เพื่อความแม่นยำสูงสุด`
-          : `ณ วันที่ ${formatThaiDate(latestMetric.metric_date)}`;
+          : `ณ วันที่ ${formatThaiDate(latestMetric.metric_date)}${sleepExtras.length ? ` • ${sleepExtras.join(' / ')}` : ''}`;
         const h = sil.bottomY - sil.topY;
         const fillY = sil.bottomY - (h * (readiness / 100)) - 10;
         document.getElementById('energy-fill-group').setAttribute('transform', `translate(0, ${fillY.toFixed(1)})`);
@@ -3558,15 +3595,40 @@
 
     function getSourceBadgeMeta(source) {
       const s = String(source || 'manual');
+      if (s === 'zepp_fit+apple_health') return { label: 'Zepp + Apple Health', cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/35' };
+      if (s === 'iphone_shortcut_fit') return { label: 'iPhone .FIT', cls: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' };
+      if (s.includes('apple_health')) return { label: 'Apple Health', cls: 'bg-rose-500/15 text-rose-300 border-rose-500/30' };
       if (s.includes('fit')) return { label: 'Zepp .FIT', cls: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' };
       if (s.includes('gpx')) return { label: 'GPX', cls: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30' };
       return { label: 'Manual', cls: 'bg-slate-800 text-slate-300 border-slate-700' };
     }
 
+    function getPersonalIphoneSyncUrl(ath) {
+      const origin = window.location.protocol === 'file:' ? 'https://healthmeai.vercel.app' : window.location.origin;
+      const token = syncTokensBySlug[ath.slug] || '';
+      return token
+        ? `${origin}/api/sync-iphone?u=${encodeURIComponent(ath.slug)}&token=${encodeURIComponent(token)}`
+        : `${origin}/api/sync-iphone?u=${encodeURIComponent(ath.slug)}`;
+    }
+
     function copyIphoneWebhookUrl() {
       const el = document.getElementById('iphone-webhook-url');
       if (!el || !el.textContent || el.textContent === '--') return;
-      copyText(el.textContent, 'คัดลอก iPhone Auto-Sync URL แล้ว');
+      copyText(el.textContent, 'คัดลอก Personal iPhone Sync URL แล้ว');
+    }
+
+    function copyShortcutsJsonTemplate() {
+      const ath = getActiveAthlete();
+      const tpl = JSON.stringify({
+        sleep_hours: '7 hr 30 min (ใส่ตัวแปร Sleep จาก Health)',
+        hrv: '64 (ใส่ตัวแปร HRV)',
+        resting_hr: '52 (ใส่ตัวแปร RHR)',
+        weight_kg: ath?.weight_kg || 55,
+        steps: '8500 (ใส่ตัวแปร Steps)',
+        filename: '(Optional) ชื่อไฟล์ .fit ล่าสุด',
+        fit_base64: '(Optional) Base64 ของไฟล์ .fit ล่าสุด'
+      }, null, 2);
+      copyText(tpl, 'คัดลอกโครงสร้าง JSON สำหรับ Apple Shortcuts แล้ว');
     }
 
     function renderImportTab() {
@@ -3574,10 +3636,9 @@
       if (!ath) return;
 
       const hookEl = document.getElementById('iphone-webhook-url');
-      if (hookEl) {
-        const origin = window.location.protocol === 'file:' ? 'https://healthmeai.vercel.app' : window.location.origin;
-        hookEl.textContent = `${origin}/api/ingest-health?u=${ath.slug}`;
-      }
+      if (hookEl) hookEl.textContent = getPersonalIphoneSyncUrl(ath);
+      const badgeEl = document.getElementById('iphone-sync-user-badge');
+      if (badgeEl) badgeEl.textContent = `${ath.name} (?u=${ath.slug})`;
 
       const workouts = (workoutsByAthlete[ath.id] || []).toSorted(compareWorkoutsDesc);
       const metrics = (metricsByAthlete[ath.id] || []).toSorted((a, b) => b.metric_date.localeCompare(a.metric_date));
@@ -3632,6 +3693,9 @@
             `${w.duration_min} นาที`,
             Number(w.distance_km) > 0 ? `${w.distance_km} กม.` : null,
             `Avg HR ${w.avg_hr}${Number(w.max_hr) > 0 ? ` / Max ${w.max_hr}` : ''}`,
+            Number(w.total_calories) > 0 ? `${w.total_calories} kcal` : null,
+            Number(w.aerobic_te) > 0 ? `TE ${w.aerobic_te}/${w.anaerobic_te || 0}` : null,
+            Number(w.training_load_peak) > 0 ? `EPOC ${w.training_load_peak}` : null,
             `TRIMP ${w.trimp}`
           ].filter(Boolean);
           meta.textContent = parts.join(' • ');
@@ -4045,6 +4109,38 @@
         setUrlSlug(matched.slug);
       }
       switchTab('dashboard');
+
+      // Automatic background refresh so iPhone Shortcuts syncs appear immediately on open tabs
+      async function silentCheckForUpdates() {
+        if (!isSupabaseLive || bulkImportRunning || document.visibilityState === 'hidden') return;
+        const now = Date.now();
+        if (now - lastSilentSyncAt < 15000) return;
+        lastSilentSyncAt = now;
+
+        const ath = getActiveAthlete();
+        const prevW = ath ? (workoutsByAthlete[ath.id] || []).length : 0;
+        const prevM = ath ? (metricsByAthlete[ath.id] || []).length : 0;
+        const prevLatestW = ath ? (workoutsByAthlete[ath.id] || [])[0]?.id : null;
+        const prevLatestM = ath ? JSON.stringify((metricsByAthlete[ath.id] || [])[0] || null) : null;
+
+        await initStorage();
+        const curAth = getActiveAthlete();
+        const nextW = curAth ? (workoutsByAthlete[curAth.id] || []).length : 0;
+        const nextM = curAth ? (metricsByAthlete[curAth.id] || []).length : 0;
+        const nextLatestW = curAth ? (workoutsByAthlete[curAth.id] || [])[0]?.id : null;
+        const nextLatestM = curAth ? JSON.stringify((metricsByAthlete[curAth.id] || [])[0] || null) : null;
+
+        if (nextW !== prevW || nextM !== prevM || nextLatestW !== prevLatestW || nextLatestM !== prevLatestM) {
+          renderAll();
+          showToast('ซิงก์ข้อมูลใหม่จาก iPhone / Zepp อัตโนมัติแล้ว');
+        }
+      }
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') silentCheckForUpdates();
+      });
+      window.addEventListener('focus', () => silentCheckForUpdates());
+      setInterval(silentCheckForUpdates, 60000);
     });
   </script>
 </body>
