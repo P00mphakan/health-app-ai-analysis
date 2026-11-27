@@ -2808,7 +2808,7 @@
         }
       }
 
-      // Source Badges on Body Energy Battery card (iPhone / ไฟล์ .FIT)
+      // Source Badges on Body Energy Battery card (iPhone icon / FIT)
       const batBadgesEl = document.getElementById('battery-source-badges');
       if (batBadgesEl) {
         const dashBadges = [];
@@ -2817,16 +2817,13 @@
             || latestMetric.steps != null
             || latestMetric.sleep_deep_min != null
             || latestMetric.spo2 != null;
-          dashBadges.push(isIphoneMetric
-            ? { label: '📱 มือถือ iPhone', cls: 'bg-rose-500/15 text-rose-300 border-rose-500/35' }
-            : { label: '✏️ กรอกสุขภาพเอง', cls: 'bg-slate-800 text-slate-300 border-slate-700' }
-          );
+          dashBadges.push(isIphoneMetric ? SOURCE_BADGE_DEF.iphone : SOURCE_BADGE_DEF.manual);
         }
         if (workouts.some(w => String(w.source || '').includes('fit'))) {
-          dashBadges.push({ label: '📄 ไฟล์ .FIT', cls: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/35' });
+          dashBadges.push(SOURCE_BADGE_DEF.fit);
         } else if (workouts.some(w => String(w.source || '').includes('apple_health'))) {
-          if (!dashBadges.some(b => b.label.includes('iPhone'))) {
-            dashBadges.push({ label: '📱 มือถือ iPhone', cls: 'bg-rose-500/15 text-rose-300 border-rose-500/35' });
+          if (!dashBadges.some(b => b.key === 'iphone')) {
+            dashBadges.push(SOURCE_BADGE_DEF.iphone);
           }
         }
         renderBadgePillsSafe(batBadgesEl, dashBadges);
@@ -2856,11 +2853,7 @@
       const scBadgesEl = document.getElementById('sleep-card-source-badges');
       if (latestMetric) {
         const isIphoneM = latestMetric.source === 'iphone_apple_health' || dispSteps != null || latestMetric.sleep_deep_min != null || latestMetric.spo2 != null;
-        renderBadgePillsSafe(scBadgesEl, [
-          isIphoneM
-            ? { label: '📱 มือถือ iPhone', cls: 'bg-rose-500/15 text-rose-300 border-rose-500/35' }
-            : { label: '✏️ กรอกเอง', cls: 'bg-slate-800 text-slate-300 border-slate-700' }
-        ]);
+        renderBadgePillsSafe(scBadgesEl, [isIphoneM ? SOURCE_BADGE_DEF.iphone : SOURCE_BADGE_DEF.manual]);
         scDateEl.textContent = `อัปเดตล่าสุด ณ วันที่ ${formatThaiDate(latestMetric.metric_date)}${latestMetric.spo2 > 0 ? ` • SpO2 ${latestMetric.spo2}%` : ''}`;
       } else {
         renderBadgePillsSafe(scBadgesEl, []);
@@ -3139,7 +3132,7 @@
         const wkg = calcWkg(w.avg_power, ath.weight_kg);
         const trimp = Number(w.trimp) > 0 ? w.trimp : calcBanisterTRIMP(w.duration_min, w.avg_hr, ath);
         const sourceTagsHtml = getSourceBadges(w.source)
-          .map(b => `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${b.cls}">${b.label}</span>`)
+          .map(renderSourceBadgeHtml)
           .join('');
 
         return `
@@ -3981,34 +3974,80 @@
     let bulkImportRunning = false;
     let importHistoryShowAll = false;
 
+    const SMARTPHONE_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3" aria-hidden="true"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>';
+
+    const SOURCE_BADGE_DEF = {
+      iphone: {
+        key: 'iphone',
+        iconOnly: true,
+        label: '',
+        title: 'ข้อมูลจากมือถือ iPhone',
+        cls: 'px-1.5 py-0.5 bg-rose-500/15 text-rose-300 border-rose-500/35'
+      },
+      fit: {
+        key: 'fit',
+        iconOnly: false,
+        label: 'FIT',
+        title: 'ข้อมูลจากไฟล์ .FIT',
+        cls: 'px-2 py-0.5 font-num font-bold tracking-wider bg-cyan-500/15 text-cyan-300 border-cyan-500/35'
+      },
+      gpx: {
+        key: 'gpx',
+        iconOnly: false,
+        label: 'GPX',
+        title: 'ข้อมูลจากไฟล์ .GPX',
+        cls: 'px-2 py-0.5 font-num font-bold tracking-wider bg-indigo-500/15 text-indigo-300 border-indigo-500/35'
+      },
+      manual: {
+        key: 'manual',
+        iconOnly: false,
+        label: 'กรอกเอง',
+        title: 'บันทึกด้วยตนเอง',
+        cls: 'px-2 py-0.5 bg-slate-800 text-slate-300 border-slate-700'
+      }
+    };
+
     function getSourceBadges(source) {
       const s = String(source || 'manual').toLowerCase();
       if (s === 'zepp_fit+apple_health' || s === 'iphone_shortcut_fit') {
-        return [
-          { label: '📱 มือถือ iPhone', cls: 'bg-rose-500/15 text-rose-300 border-rose-500/35' },
-          { label: '📄 ไฟล์ .FIT', cls: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/35' }
-        ];
+        return [SOURCE_BADGE_DEF.iphone, SOURCE_BADGE_DEF.fit];
       }
       if (s.includes('apple_health') || s.includes('iphone')) {
-        return [{ label: '📱 มือถือ iPhone', cls: 'bg-rose-500/15 text-rose-300 border-rose-500/35' }];
+        return [SOURCE_BADGE_DEF.iphone];
       }
       if (s.includes('fit')) {
-        return [{ label: '📄 ไฟล์ .FIT', cls: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/35' }];
+        return [SOURCE_BADGE_DEF.fit];
       }
       if (s.includes('gpx')) {
-        return [{ label: '🗺️ ไฟล์ .GPX', cls: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/35' }];
+        return [SOURCE_BADGE_DEF.gpx];
       }
-      return [{ label: '✏️ กรอกเอง', cls: 'bg-slate-800 text-slate-300 border-slate-700' }];
+      return [SOURCE_BADGE_DEF.manual];
+    }
+
+    function createSourceBadgeEl(b) {
+      const span = document.createElement('span');
+      span.className = `inline-flex items-center justify-center rounded-full text-[10px] leading-none font-semibold border h-[19px] ${b.cls}`;
+      if (b.title) {
+        span.title = b.title;
+        span.setAttribute('aria-label', b.title);
+      }
+      if (b.iconOnly) {
+        span.innerHTML = SMARTPHONE_ICON_SVG;
+      } else {
+        span.textContent = b.label;
+      }
+      return span;
+    }
+
+    function renderSourceBadgeHtml(b) {
+      const inner = b.iconOnly ? SMARTPHONE_ICON_SVG : b.label;
+      const titleAttr = b.title ? ` title="${b.title}" aria-label="${b.title}"` : '';
+      return `<span class="inline-flex items-center justify-center rounded-full text-[10px] leading-none font-semibold border h-[19px] ${b.cls}"${titleAttr}>${inner}</span>`;
     }
 
     function renderBadgePillsSafe(container, badges) {
       if (!container) return;
-      const nodes = (badges || []).map(b => {
-        const span = document.createElement('span');
-        span.className = `inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${b.cls}`;
-        span.textContent = b.label;
-        return span;
-      });
+      const nodes = (badges || []).map(createSourceBadgeEl);
       container.replaceChildren(...nodes);
     }
 
@@ -4084,11 +4123,7 @@
             dSpan.textContent = formatThaiDate(m.metric_date);
 
             const isIphoneM = m.source === 'iphone_apple_health' || Number(m.steps) > 0 || m.sleep_deep_min != null || m.spo2 != null;
-            const bSpan = document.createElement('span');
-            bSpan.className = isIphoneM
-              ? 'px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-rose-500/15 text-rose-300 border-rose-500/35'
-              : 'px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-slate-800 text-slate-300 border-slate-700';
-            bSpan.textContent = isIphoneM ? '📱 มือถือ iPhone' : '✏️ กรอกเอง';
+            const bSpan = createSourceBadgeEl(isIphoneM ? SOURCE_BADGE_DEF.iphone : SOURCE_BADGE_DEF.manual);
 
             left.append(dSpan, bSpan);
 
@@ -4141,12 +4176,7 @@
           dateSpan.textContent = formatThaiDate(w.workout_date);
 
           topLine.append(dateSpan);
-          badges.forEach(b => {
-            const srcSpan = document.createElement('span');
-            srcSpan.className = `px-2 py-0.5 rounded-full text-[10px] font-semibold border ${b.cls}`;
-            srcSpan.textContent = b.label;
-            topLine.append(srcSpan);
-          });
+          badges.forEach(b => topLine.append(createSourceBadgeEl(b)));
 
           const titleSpan = document.createElement('span');
           titleSpan.className = 'text-xs font-bold text-white truncate';
