@@ -304,6 +304,7 @@
                 <span id="battery-status-pill" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700">
                   รอข้อมูลสุขภาพ
                 </span>
+                <div id="battery-source-badges" class="flex flex-wrap justify-end gap-1 mt-1.5"></div>
                 <p id="battery-date-sub" class="text-[11px] text-slate-400 mt-1">ยังไม่มีบันทึกค่าสุขภาพ</p>
               </div>
             </div>
@@ -465,7 +466,10 @@
                 <i data-lucide="whistle" class="w-5 h-5"></i>
               </div>
               <div>
-                <h2 class="font-display text-base font-bold text-white">บทวิเคราะห์ Workout ล่าสุด (Post-Workout Coach)</h2>
+                <div class="flex flex-wrap items-center gap-2">
+                  <h2 class="font-display text-base font-bold text-white">บทวิเคราะห์ Workout ล่าสุด (Post-Workout Coach)</h2>
+                  <span id="latest-wo-source-badges" class="inline-flex flex-wrap items-center gap-1"></span>
+                </div>
                 <p id="latest-wo-subtitle" class="text-xs text-cyan-300/80">ยังไม่มีประวัติ Workout</p>
               </div>
             </div>
@@ -976,6 +980,7 @@
           <div class="flex flex-wrap items-center gap-2">
             <span class="text-[10px] font-num uppercase tracking-wider text-cyan-400">Post-Workout Coach Report</span>
             <span id="cr-provider" class="px-2 py-0.5 rounded-full text-[10px] font-num font-semibold bg-slate-900 border border-slate-700 text-slate-400">Rule-Based</span>
+            <span id="cr-source-badges" class="inline-flex flex-wrap items-center gap-1"></span>
           </div>
           <h3 id="cr-title" class="font-display text-base sm:text-lg font-bold text-white mt-0.5">--</h3>
           <p id="cr-meta" class="text-xs text-slate-400 mt-0.5">--</p>
@@ -2733,6 +2738,30 @@
         }
       }
 
+      // Source Badges on Body Energy Battery card (iPhone / ไฟล์ .FIT)
+      const batBadgesEl = document.getElementById('battery-source-badges');
+      if (batBadgesEl) {
+        const dashBadges = [];
+        if (latestMetric) {
+          const isIphoneMetric = latestMetric.source === 'iphone_apple_health'
+            || latestMetric.steps != null
+            || latestMetric.sleep_deep_min != null
+            || latestMetric.spo2 != null;
+          dashBadges.push(isIphoneMetric
+            ? { label: '📱 มือถือ iPhone', cls: 'bg-rose-500/15 text-rose-300 border-rose-500/35' }
+            : { label: '✏️ กรอกสุขภาพเอง', cls: 'bg-slate-800 text-slate-300 border-slate-700' }
+          );
+        }
+        if (workouts.some(w => String(w.source || '').includes('fit'))) {
+          dashBadges.push({ label: '📄 ไฟล์ .FIT', cls: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/35' });
+        } else if (workouts.some(w => String(w.source || '').includes('apple_health'))) {
+          if (!dashBadges.some(b => b.label.includes('iPhone'))) {
+            dashBadges.push({ label: '📱 มือถือ iPhone', cls: 'bg-rose-500/15 text-rose-300 border-rose-500/35' });
+          }
+        }
+        renderBadgePillsSafe(batBadgesEl, dashBadges);
+      }
+
       // 5 Vital Pills under SVG
       document.getElementById('bat-sleep').textContent = latestMetric?.sleep_hours != null ? `${latestMetric.sleep_hours}ช.` : '--';
       document.getElementById('bat-hrv').textContent = latestMetric?.hrv != null ? `${latestMetric.hrv}` : '--';
@@ -2767,15 +2796,17 @@
           latestWoAiAbortController = null;
         }
         woSub.textContent = 'ยังไม่มีบันทึก Workout';
+        renderBadgePillsSafe(document.getElementById('latest-wo-source-badges'), []);
         woActs.classList.add('hidden');
         latestReportPlainText = '';
         woBody.innerHTML = `
           <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-6 text-center">
-            <p class="text-xs text-slate-400 mb-3">นำเข้าไฟล์ .GPX หรือเพิ่ม Workout เพื่อรับบทวิเคราะห์ HR Zone, Performance, Tactics และแนวทางพัฒนา</p>
-            <button onclick="switchTab('workouts')" class="px-4 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 text-xs font-bold">ไปที่หน้าบันทึก / นำเข้า GPX</button>
+            <p class="text-xs text-slate-400 mb-3">นำเข้าไฟล์ .FIT / .GPX หรือเพิ่ม Workout เพื่อรับบทวิเคราะห์ HR Zone, Performance, Tactics และแนวทางพัฒนา</p>
+            <button onclick="switchTab('import')" class="px-4 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 text-xs font-bold">ไปที่หน้านำเข้าข้อมูล (Zepp)</button>
           </div>`;
       } else {
         woSub.textContent = `${latestWo.title || latestWo.sport_type} • ${formatThaiDate(latestWo.workout_date)}`;
+        renderBadgePillsSafe(document.getElementById('latest-wo-source-badges'), getSourceBadges(latestWo.source));
         woActs.classList.remove('hidden');
         resolveWorkoutCoachWithAI(latestWo, ath, fullTimeline, 'latest', false);
       }
@@ -2984,6 +3015,9 @@
         const ef = calcEF(w);
         const wkg = calcWkg(w.avg_power, ath.weight_kg);
         const trimp = Number(w.trimp) > 0 ? w.trimp : calcBanisterTRIMP(w.duration_min, w.avg_hr, ath);
+        const sourceTagsHtml = getSourceBadges(w.source)
+          .map(b => `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${b.cls}">${b.label}</span>`)
+          .join('');
 
         return `
           <div onclick="openCoachReportModal('${w.id}')" class="glass-card rounded-2xl p-4 sm:p-5 hover:border-cyan-500/50 cursor-pointer transition-all group">
@@ -2991,8 +3025,11 @@
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl border ${sm.cls} flex items-center justify-center text-lg shrink-0">${sm.emoji}</div>
                 <div>
-                  <h4 class="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">${w.title || sm.label}</h4>
-                  <p class="text-xs text-slate-400">${formatThaiDate(w.workout_date)} • ${sm.label} • <span class="font-num text-[10px] text-cyan-400">คลิกอ่านบทวิเคราะห์โค้ช →</span></p>
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <h4 class="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">${w.title || sm.label}</h4>
+                    ${sourceTagsHtml}
+                  </div>
+                  <p class="text-xs text-slate-400 mt-0.5">${formatThaiDate(w.workout_date)} • ${sm.label} • <span class="font-num text-[10px] text-cyan-400">คลิกอ่านบทวิเคราะห์โค้ช →</span></p>
                 </div>
               </div>
               <div class="flex items-center gap-1.5" onclick="event.stopPropagation()">
@@ -3097,6 +3134,7 @@
 
       document.getElementById('cr-title').textContent = w.title || w.sport_type;
       document.getElementById('cr-meta').textContent = `${ath.name} • ${formatThaiDate(w.workout_date)} • ${w.duration_min} นาที • TRIMP ${rep.trimp}`;
+      renderBadgePillsSafe(document.getElementById('cr-source-badges'), getSourceBadges(w.source));
       openModal('modal-coach-report');
       resolveWorkoutCoachWithAI(w, ath, fullTimeline, 'modal', false);
       renderCoachChatUI('modal');
@@ -3820,14 +3858,35 @@
     let bulkImportRunning = false;
     let importHistoryShowAll = false;
 
-    function getSourceBadgeMeta(source) {
-      const s = String(source || 'manual');
-      if (s === 'zepp_fit+apple_health') return { label: 'Zepp + Apple Health', cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/35' };
-      if (s === 'iphone_shortcut_fit') return { label: 'iPhone .FIT', cls: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' };
-      if (s.includes('apple_health')) return { label: 'Apple Health', cls: 'bg-rose-500/15 text-rose-300 border-rose-500/30' };
-      if (s.includes('fit')) return { label: 'Zepp .FIT', cls: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' };
-      if (s.includes('gpx')) return { label: 'GPX', cls: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30' };
-      return { label: 'Manual', cls: 'bg-slate-800 text-slate-300 border-slate-700' };
+    function getSourceBadges(source) {
+      const s = String(source || 'manual').toLowerCase();
+      if (s === 'zepp_fit+apple_health' || s === 'iphone_shortcut_fit') {
+        return [
+          { label: '📱 มือถือ iPhone', cls: 'bg-rose-500/15 text-rose-300 border-rose-500/35' },
+          { label: '📄 ไฟล์ .FIT', cls: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/35' }
+        ];
+      }
+      if (s.includes('apple_health') || s.includes('iphone')) {
+        return [{ label: '📱 มือถือ iPhone', cls: 'bg-rose-500/15 text-rose-300 border-rose-500/35' }];
+      }
+      if (s.includes('fit')) {
+        return [{ label: '📄 ไฟล์ .FIT', cls: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/35' }];
+      }
+      if (s.includes('gpx')) {
+        return [{ label: '🗺️ ไฟล์ .GPX', cls: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/35' }];
+      }
+      return [{ label: '✏️ กรอกเอง', cls: 'bg-slate-800 text-slate-300 border-slate-700' }];
+    }
+
+    function renderBadgePillsSafe(container, badges) {
+      if (!container) return;
+      const nodes = (badges || []).map(b => {
+        const span = document.createElement('span');
+        span.className = `inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${b.cls}`;
+        span.textContent = b.label;
+        return span;
+      });
+      container.replaceChildren(...nodes);
     }
 
     function getPersonalIphoneSyncUrl(ath) {
@@ -3889,7 +3948,7 @@
       } else {
         const limit = importHistoryShowAll ? workouts.length : 50;
         const rows = workouts.slice(0, limit).map(w => {
-          const badge = getSourceBadgeMeta(w.source);
+          const badges = getSourceBadges(w.source);
           const row = document.createElement('div');
           row.className = 'flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-950/75 border border-slate-800/90 hover:border-cyan-500/30 px-4 py-3 transition-all';
 
@@ -3897,21 +3956,25 @@
           left.className = 'min-w-0 flex-1';
 
           const topLine = document.createElement('div');
-          topLine.className = 'flex flex-wrap items-center gap-2';
+          topLine.className = 'flex flex-wrap items-center gap-1.5';
 
           const dateSpan = document.createElement('span');
           dateSpan.className = 'font-num text-[11px] font-semibold text-cyan-300';
           dateSpan.textContent = formatThaiDate(w.workout_date);
 
-          const srcSpan = document.createElement('span');
-          srcSpan.className = `px-2 py-0.5 rounded-md text-[10px] font-semibold border ${badge.cls}`;
-          srcSpan.textContent = badge.label;
+          topLine.append(dateSpan);
+          badges.forEach(b => {
+            const srcSpan = document.createElement('span');
+            srcSpan.className = `px-2 py-0.5 rounded-full text-[10px] font-semibold border ${b.cls}`;
+            srcSpan.textContent = b.label;
+            topLine.append(srcSpan);
+          });
 
           const titleSpan = document.createElement('span');
           titleSpan.className = 'text-xs font-bold text-white truncate';
           titleSpan.textContent = w.title || w.sport_type;
 
-          topLine.append(dateSpan, srcSpan, titleSpan);
+          topLine.append(titleSpan);
 
           const meta = document.createElement('p');
           meta.className = 'font-num text-[11px] text-slate-400 mt-1';

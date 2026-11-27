@@ -175,7 +175,8 @@ export default async function handler(req, res) {
       sleep_deep_min: ext.sleep_deep_min ?? existing?.sleep_deep_min ?? null,
       sleep_rem_min: ext.sleep_rem_min ?? existing?.sleep_rem_min ?? null,
       sleep_light_min: ext.sleep_light_min ?? existing?.sleep_light_min ?? null,
-      spo2: ext.spo2 ?? existing?.spo2 ?? null
+      spo2: ext.spo2 ?? existing?.spo2 ?? null,
+      source: 'iphone_apple_health'
     };
 
     const up = await safeUpsertRow(sb, 'daily_metrics', mergedBase, mergedExt, 'athlete_id,metric_date');
