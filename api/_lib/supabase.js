@@ -7,18 +7,28 @@ const DEFAULT_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_pNynQzDaPkEjcsuiB1RlYA_
 
 export function getSupabaseConfig() {
   const url = (process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL).trim();
-  const key = (
+  const serverKey = (
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.SUPABASE_SECRET_KEY ||
+    ''
+  ).trim();
+  const key = (
+    serverKey ||
     process.env.SUPABASE_ANON_KEY ||
     process.env.SUPABASE_PUBLISHABLE_KEY ||
     DEFAULT_SUPABASE_PUBLISHABLE_KEY
   ).trim();
-  return { url, key };
+  return {
+    url,
+    key,
+    mode: serverKey ? 'service_role' : 'publishable'
+  };
 }
 
 export function getSupabaseClient() {
   const { url, key } = getSupabaseConfig();
   if (!url || !key) return null;
-  return createClient(url, key, { auth: { persistSession: false } });
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
 }

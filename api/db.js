@@ -10,6 +10,7 @@ function getBackendStatus(supabaseConnected) {
   const sbCfg = getSupabaseConfig();
   return {
     supabase: Boolean(supabaseConnected),
+    supabaseMode: sbCfg.mode,
     aiPrimary: Boolean(gemini.apiKey),
     aiPrimaryModel: gemini.model,
     aiFallback: Boolean(ollama.url),

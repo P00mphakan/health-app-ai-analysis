@@ -3311,10 +3311,13 @@
 
     function showToast(msg) {
       const t = document.getElementById('toast');
+      const isErr = /ไม่สำเร็จ|error|ผิดพลาด|ไม่พบ/i.test(String(msg || ''));
+      t.className = isErr
+        ? 'fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-2xl bg-rose-500 text-white font-bold text-xs shadow-2xl'
+        : 'fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-500 text-slate-950 font-bold text-xs shadow-2xl';
       document.getElementById('toast-text').textContent = msg;
-      t.classList.remove('hidden'); t.classList.add('flex');
       clearTimeout(window._tt);
-      window._tt = setTimeout(() => { t.classList.add('hidden'); t.classList.remove('flex'); }, 2800);
+      window._tt = setTimeout(() => { t.classList.add('hidden'); t.classList.remove('flex'); }, isErr ? 4200 : 2800);
     }
 
     // Drag & Drop support for GPX zone
