@@ -1,5 +1,6 @@
-// api/ingest-health.js — รับข้อมูลสุขภาพจาก iPhone ส่งเข้า Supabase
+// api/ingest-health.js — รับข้อมูลสุขภาพรายวันจาก Zepp -> Apple Health ส่งเข้า Supabase + วิเคราะห์ AI อัตโนมัติ
 import { createClient } from '@supabase/supabase-js';
+import { runAiCoach } from './_lib/coach-engine.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -16,11 +17,13 @@ export default async function handler(req, res) {
   const slug = (req.query.u || req.body?.slug || '').toLowerCase();
   if (!slug) return res.status(400).json({ error: 'Missing athlete slug (?u=pluk)' });
 
-  const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false }
+  });
 
   const { data: athlete, error: aErr } = await sb
     .from('athletes')
-    .select('id, weight_kg')
+    .select('*')
     .eq('slug', slug)
     .single();
 
@@ -67,5 +70,36 @@ export default async function handler(req, res) {
     .single();
 
   if (error) return res.status(500).json({ error: error.message });
-  return res.status(200).json({ ok: true, saved: data });
+
+  // Auto-generate & cache Daily AI Brief once morning vitals arrive (if not yet cached or force analyze)
+  let savedRow = data;
+  let aiProvider = 'cached';
+  const hasCoreVitals = sleep_hours != null || hrv != null || resting_hr != null;
+  const shouldAnalyze = body.analyze === true || (!data.ai_daily_brief && hasCoreVitals);
+
+  if (shouldAnalyze) {
+    const aiRes = await runAiCoach({
+      mode: 'daily',
+      athlete,
+      metrics: data,
+      pmc: body.pmc || null
+    });
+    aiProvider = aiRes.provider;
+    if (aiRes.data) {
+      const cachedBrief = {
+        ...aiRes.data,
+        _provider: aiRes.provider,
+        _generatedAt: new Date().toISOString()
+      };
+      const { data: updated } = await sb
+        .from('daily_metrics')
+        .update({ ai_daily_brief: cachedBrief })
+        .eq('id', data.id)
+        .select()
+        .single();
+      if (updated) savedRow = updated;
+    }
+  }
+
+  return res.status(200).json({ ok: true, saved: savedRow, ai_provider: aiProvider });
 }

@@ -2,14 +2,17 @@
 // Uses server-side Environment Variables (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY)
 // so clients never need to enter or expose database credentials.
 import { createClient } from '@supabase/supabase-js';
+import { getGeminiConfig, getOllamaConfig } from './_lib/coach-engine.js';
 
 function getBackendStatus(supabaseConnected) {
+  const gemini = getGeminiConfig();
+  const ollama = getOllamaConfig();
   return {
     supabase: Boolean(supabaseConnected),
-    aiPrimary: Boolean(process.env.GEMINI_API_KEY),
-    aiPrimaryModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-    aiFallback: Boolean(process.env.OLLAMA_CF_URL),
-    aiFallbackModel: process.env.OLLAMA_MODEL || 'qwen2.5:14b',
+    aiPrimary: Boolean(gemini.apiKey),
+    aiPrimaryModel: gemini.model,
+    aiFallback: Boolean(ollama.url),
+    aiFallbackModel: ollama.model,
     webhook: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)
   };
 }

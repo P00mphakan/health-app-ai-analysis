@@ -557,23 +557,23 @@
             <div class="mb-3">
               <h2 class="font-display text-base font-bold text-white flex items-center gap-2">
                 <i data-lucide="file-up" class="w-5 h-5 text-cyan-400"></i>
-                <span>นำเข้าไฟล์ .GPX จาก Zepp / Amazfit</span>
+                <span>นำเข้าไฟล์ .FIT / .GPX จาก Zepp / Amazfit</span>
               </h2>
-              <p class="text-xs text-slate-400">คำนวณระยะทาง Haversine, เวลา, Pace, Avg/Max HR, ความชัน และ Banister TRIMP แยกเพศ พร้อมเปิดบทวิเคราะห์โค้ชทันทีหลังบันทึก</p>
+              <p class="text-xs text-slate-400">รองรับไฟล์ .FIT (Zepp iCloud Backup) และ .GPX โดยตรง — คำนวณระยะทาง, Pace, Power, Avg/Max HR, ความชัน และ Banister TRIMP แยกเพศ พร้อมเปิดบทวิเคราะห์ AI โค้ชทันที</p>
             </div>
 
             <label id="gpx-dropzone" for="gpx-file-input" class="mt-2 flex flex-col items-center justify-center border-2 border-dashed border-slate-700 hover:border-cyan-400/70 bg-slate-950/60 rounded-2xl p-6 cursor-pointer transition-all text-center">
               <i data-lucide="upload-cloud" class="w-8 h-8 text-cyan-400 mb-2"></i>
-              <p class="text-sm font-semibold text-white">ลากไฟล์ .GPX มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์</p>
-              <p class="text-[11px] text-slate-400 mt-1">รองรับไฟล์ GPX จาก Amazfit T-Rex 3 / แอป Zepp</p>
-              <input id="gpx-file-input" type="file" accept=".gpx,application/gpx+xml,text/xml" class="hidden" onchange="handleGpxFileSelect(event)" />
+              <p class="text-sm font-semibold text-white">ลากไฟล์ .FIT หรือ .GPX มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์</p>
+              <p class="text-[11px] text-slate-400 mt-1">รองรับไฟล์ .FIT และ .GPX จาก Amazfit T-Rex 3 / แอป Zepp</p>
+              <input id="gpx-file-input" type="file" accept=".fit,.gpx,application/gpx+xml,text/xml,application/octet-stream" class="hidden" onchange="handleGpxFileSelect(event)" />
             </label>
 
-            <!-- Parsed GPX Confirmation Box -->
+            <!-- Parsed FIT/GPX Confirmation Box -->
             <div id="gpx-preview-box" class="hidden mt-4 rounded-2xl bg-slate-950/90 border border-cyan-500/40 p-4 space-y-3">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <span class="text-[10px] font-semibold uppercase tracking-wider text-cyan-400">อ่านไฟล์ GPX สำเร็จ</span>
+                  <span id="gpx-prev-badge" class="text-[10px] font-semibold uppercase tracking-wider text-cyan-400">อ่านไฟล์ Zepp สำเร็จ</span>
                   <h4 id="gpx-prev-title" class="text-sm font-bold text-white"></h4>
                 </div>
                 <span id="gpx-prev-date" class="font-num text-xs text-slate-400"></span>
@@ -2795,7 +2795,78 @@
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
+    function bytesToBase64(uint8) {
+      const chunkSize = 0x8000;
+      const parts = [];
+      for (let i = 0; i < uint8.length; i += chunkSize) {
+        parts.push(String.fromCharCode.apply(null, uint8.subarray(i, i + chunkSize)));
+      }
+      return btoa(parts.join(''));
+    }
+
+    function populateWorkoutImportPreview(draft, badgeText) {
+      parsedGpxDraft = draft;
+      const badgeEl = document.getElementById('gpx-prev-badge');
+      if (badgeEl) badgeEl.textContent = badgeText;
+      document.getElementById('gpx-prev-title').textContent = draft.title;
+      document.getElementById('gpx-prev-date').textContent = formatThaiDate(draft.workout_date);
+      document.getElementById('gpx-prev-dist').textContent = `${draft.distance_km} กม.`;
+      document.getElementById('gpx-prev-dur').textContent = `${draft.duration_min} นาที`;
+      document.getElementById('gpx-prev-hr').textContent = `${draft.avg_hr} / ${draft.max_hr}`;
+      document.getElementById('gpx-prev-ele').textContent = `+${draft.elevation_gain} ม.`;
+      document.getElementById('gpx-prev-trimp').textContent = draft.trimp;
+      if (draft.sport_type) {
+        document.getElementById('gpx-sport-type').value = draft.sport_type;
+      }
+      document.getElementById('gpx-power-in').value = draft.avg_power > 0 ? draft.avg_power : '';
+      document.getElementById('gpx-rpe-in').value = draft.rpe || 7;
+      document.getElementById('gpx-preview-box').classList.remove('hidden');
+    }
+
+    async function processFitFile(file) {
+      const ath = getActiveAthlete();
+      if (!ath) { showToast('กรุณาสร้างโปรไฟล์สมาชิกก่อน'); return; }
+      if (window.location.protocol === 'file:') {
+        showToast('การอ่านไฟล์ .FIT ต้องเปิดผ่านเว็บ Vercel (/api/ingest-zepp)');
+        return;
+      }
+      showToast('กำลังอ่านไฟล์ .FIT จาก Zepp...');
+      try {
+        const buf = await file.arrayBuffer();
+        const fit_base64 = bytesToBase64(new Uint8Array(buf));
+        const signal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+          ? AbortSignal.timeout(20000)
+          : undefined;
+        const res = await fetch('/api/ingest-zepp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mode: 'preview',
+            slug: ath.slug,
+            athlete_id: ath.id,
+            filename: file.name,
+            fit_base64,
+            source: 'web_fit_upload'
+          }),
+          ...(signal ? { signal } : {})
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.ok || !json.preview) {
+          throw new Error(json.error || `HTTP ${res.status}`);
+        }
+        populateWorkoutImportPreview(json.preview, 'อ่านไฟล์ Zepp .FIT สำเร็จ');
+        showToast('อ่านไฟล์ .FIT สำเร็จ — ตรวจสอบและกดบันทึก');
+      } catch (err) {
+        console.error(err);
+        showToast('อ่านไฟล์ .FIT ไม่สำเร็จ: ' + (err?.message || 'Unknown error'));
+      }
+    }
+
     function processGpxFile(file) {
+      if (file?.name?.toLowerCase().endsWith('.fit')) {
+        processFitFile(file);
+        return;
+      }
       const ath = getActiveAthlete();
       if (!ath) { showToast('กรุณาสร้างโปรไฟล์สมาชิกก่อน'); return; }
       const reader = new FileReader();
@@ -2849,29 +2920,23 @@
           const trkName = doc.getElementsByTagName('name')[1]?.textContent || doc.getElementsByTagName('name')[0]?.textContent || file.name.replace(/\.gpx$/i, '');
           const trimp = calcBanisterTRIMP(durationMin, avgHr, ath);
 
-          parsedGpxDraft = {
+          populateWorkoutImportPreview({
             athlete_id: ath.id,
             external_id: `gpx_${ath.slug}_${startTime ? startTime.getTime() : file.name}`,
             workout_date: workoutDate,
+            sport_type: 'running',
             title: trkName.trim(),
             duration_min: durationMin,
             distance_km: +totalDistKm.toFixed(2),
             avg_hr: avgHr,
             max_hr: maxHr,
+            avg_power: 0,
             cadence: avgCad,
             elevation_gain: +eleGain.toFixed(1),
+            rpe: 7,
             trimp,
             source: 'gpx_upload'
-          };
-
-          document.getElementById('gpx-prev-title').textContent = parsedGpxDraft.title;
-          document.getElementById('gpx-prev-date').textContent = formatThaiDate(parsedGpxDraft.workout_date);
-          document.getElementById('gpx-prev-dist').textContent = `${parsedGpxDraft.distance_km} กม.`;
-          document.getElementById('gpx-prev-dur').textContent = `${parsedGpxDraft.duration_min} นาที`;
-          document.getElementById('gpx-prev-hr').textContent = `${parsedGpxDraft.avg_hr} / ${parsedGpxDraft.max_hr}`;
-          document.getElementById('gpx-prev-ele').textContent = `+${parsedGpxDraft.elevation_gain} ม.`;
-          document.getElementById('gpx-prev-trimp').textContent = parsedGpxDraft.trimp;
-          document.getElementById('gpx-preview-box').classList.remove('hidden');
+          }, 'อ่านไฟล์ GPX สำเร็จ');
         } catch (err) {
           console.error(err);
           showToast('อ่านไฟล์ GPX ไม่สำเร็จ');

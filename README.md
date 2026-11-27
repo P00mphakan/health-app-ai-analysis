@@ -6,13 +6,19 @@ Production-ready family health & sports performance dashboard integrated with **
 
 ```text
 ├── api/
-│   ├── db.js                   # Serverless API: Automatic Supabase CRUD + live backend status
-│   ├── coach.js                # Serverless API: 3-tier AI Coach (Gemini -> Ollama CF -> Rule-Based)
-│   └── ingest-health.js        # Serverless API: Apple Health / Health Auto Export webhook
+│   ├── _lib/coach-engine.js    # Shared Gemini/Ollama AI Coach + Banister TRIMP engine
+│   ├── db.js                   # Serverless API: Automatic Supabase CRUD + live status
+│   ├── coach.js                # Serverless API: 3-tier AI Coach
+│   ├── ingest-zepp.js          # Serverless Bridge API: .FIT / .GPX / JSON -> Supabase + AI Coach
+│   └── ingest-health.js        # Serverless Bridge API: Apple Health vitals -> Supabase + AI Brief
 ├── public/
-│   └── index.html              # Production single-file web app (Zero mock data, status icons only)
+│   └── index.html              # Production web app (Zero mock data, direct .FIT/.GPX upload)
+├── zepp-bridge/                # Local Python Auto-Sync Bridge (modeled after badme-ai-v2/python-bridge)
+│   ├── server.py               # FastAPI server + background Zepp iCloud/dropzone auto-watcher
+│   ├── requirements.txt        # Python dependencies
+│   └── start_bridge.sh         # One-command macOS launcher
 ├── scripts/
-│   └── zepp_icloud_sync.py     # Python auto-sync for Zepp iCloud .FIT backups (auto-loads .env)
+│   └── zepp_icloud_sync.py     # Lightweight standalone Python FIT sync script
 ├── supabase/
 │   └── schema.sql              # Supabase database schema (athletes, daily_metrics, workouts)
 ├── .env.example                # Environment variable template for Vercel
@@ -23,13 +29,14 @@ Production-ready family health & sports performance dashboard integrated with **
 ## Quick Setup
 
 1. **Supabase**: Create a Supabase project, open **SQL Editor**, and run [`supabase/schema.sql`](./supabase/schema.sql).
-2. **Vercel**: Import this repository into Vercel and configure the environment variables listed in [`.env.example`](./.env.example). The web app connects to Supabase automatically via `/api/db` and displays compact status icons without requiring users to enter backend keys in the UI.
-3. **Zepp iCloud Sync (Workouts)**:
-   ```bash
-   pip install fitparse supabase
-   cp .env.example .env  # fill in SUPABASE_URL & SUPABASE_SERVICE_ROLE_KEY
-   python3 scripts/zepp_icloud_sync.py
-   ```
-4. **Apple Health Webhook (Daily Vitals)**: Point **Health Auto Export** or **Apple Shortcuts** to `POST https://<your-vercel-domain>/api/ingest-health?u=<slug>` with header `x-webhook-secret`.
-
-For the full Thai architecture blueprint and operational checklist, see [`athlete_os_production_architecture_antigravity_blueprint.md`](./athlete_os_production_architecture_antigravity_blueprint.md).
+2. **Vercel**: Import this repository into Vercel and configure the environment variables listed in [`.env.example`](./.env.example).
+   - **Shared Gemini API Key**: Supports `GEMINI_API_KEY`, `GOOGLE_GEMINI_API_KEY`, `GOOGLE_API_KEY`, `NEXT_PUBLIC_GEMINI_API_KEY`, or `VITE_GEMINI_API_KEY` — you can share/reuse the exact same Gemini API Key variable from another Vercel project (such as `badme-ai-v2`) via Vercel Team Shared Environment Variables or Project Settings.
+3. **Zepp App Bridge (3 ways to sync)**:
+   - **Direct on Web (Zero Install)**: Open the Workout tab and drag & drop `.FIT` or `.GPX` exported from Zepp directly into the browser.
+   - **Local Python Auto-Bridge (`zepp-bridge/`)**:
+     ```bash
+     cd zepp-bridge
+     ./start_bridge.sh
+     ```
+     Watches iCloud Drive `Zepp/FITs` and `zepp-bridge/dropzone/` automatically and pushes new workouts to `https://healthmeai.vercel.app/api/ingest-zepp` (where Supabase saves and Gemini analyzes them immediately).
+   - **Apple Health Daily Vitals Webhook**: Point **Health Auto Export** or **Apple Shortcuts** to `POST https://healthmeai.vercel.app/api/ingest-health?u=<slug>` with header `x-webhook-secret`.

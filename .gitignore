@@ -12,6 +12,12 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+zepp-bridge/.venv/
+zepp-bridge/.synced_state.json
+zepp-bridge/dropzone/*.fit
+zepp-bridge/dropzone/*.FIT
+zepp-bridge/dropzone/*.gpx
+zepp-bridge/dropzone/*.GPX
 
 # OS files
 .DS_Store
