@@ -99,11 +99,18 @@ export function normalizeSportType(rawSport) {
 
 export function parseModelJson(rawText, mode) {
   if (!rawText || typeof rawText !== 'string') return null;
-  const cleaned = rawText
+  let cleaned = rawText
     .trim()
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```$/i, '')
     .trim();
+
+  // Extract outermost JSON object if the model added surrounding text
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+  }
 
   const parsed = JSON.parse(cleaned);
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
@@ -113,13 +120,29 @@ export function parseModelJson(rawText, mode) {
       ? ['verdict', 'status', 'load', 'plan', 'warning']
       : ['hrSection', 'perfSection', 'tacticsSection', 'nextDrill'];
 
+  const normalized = {};
   for (const key of requiredKeys) {
-    if (typeof parsed[key] !== 'string' || !parsed[key].trim()) {
-      return null;
+    const val = parsed[key];
+    let text = '';
+    if (typeof val === 'string') {
+      text = val.trim();
+    } else if (Array.isArray(val)) {
+      text = val
+        .map((item, idx) => {
+          const s = typeof item === 'string' ? item.trim() : item != null ? String(item).trim() : '';
+          if (!s) return '';
+          return /^\d+[\.\)]\s/.test(s) ? s : `${idx + 1}) ${s}`;
+        })
+        .filter(Boolean)
+        .join(' ');
+    } else if (typeof val === 'number') {
+      text = String(val);
     }
+    if (!text) return null;
+    normalized[key] = text;
   }
 
-  return Object.fromEntries(requiredKeys.map((k) => [k, parsed[k].trim()]));
+  return normalized;
 }
 
 export async function runAiCoach({ mode, athlete, metrics, workout, pmc }) {
@@ -174,6 +197,16 @@ ACWR หลังซ้อม: ${JSON.stringify(pmc)}
 
   // ---- TIER 1: Google Gemini API (Primary) ----
   if (geminiKey) {
+    const requiredKeys =
+      mode === 'daily'
+        ? ['verdict', 'status', 'load', 'plan', 'warning']
+        : ['hrSection', 'perfSection', 'tacticsSection', 'nextDrill'];
+    const responseSchema = {
+      type: 'OBJECT',
+      properties: Object.fromEntries(requiredKeys.map((k) => [k, { type: 'STRING' }])),
+      required: requiredKeys
+    };
+
     const gOut = await callGeminiGenerate({
       apiKey: geminiKey,
       model: geminiModel,
@@ -183,7 +216,8 @@ ACWR หลังซ้อม: ${JSON.stringify(pmc)}
         contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
         generationConfig: {
           temperature: 0.3,
-          responseMimeType: 'application/json'
+          responseMimeType: 'application/json',
+          responseSchema
         }
       }
     });
