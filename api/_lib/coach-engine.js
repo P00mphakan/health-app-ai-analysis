@@ -12,8 +12,48 @@ export function getGeminiConfig() {
     process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
     ''
   ).trim();
-  const model = (process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim();
+  const model = (process.env.GEMINI_MODEL || 'gemini-3.8-flash').trim();
   return { apiKey, model };
+}
+
+function extractGeminiText(gData) {
+  const parts = gData?.candidates?.[0]?.content?.parts || [];
+  const answerPart = parts.find((p) => typeof p?.text === 'string' && !p.thought) || parts.find((p) => typeof p?.text === 'string');
+  return answerPart?.text || null;
+}
+
+async function callGeminiGenerate({ apiKey, model, payload, timeoutMs = 15000 }) {
+  const candidates = Array.from(new Set([model, 'gemini-3.8-flash', 'gemini-flash-latest'].filter(Boolean)));
+  let lastError = 'gemini_failed';
+
+  for (const m of candidates) {
+    try {
+      const gRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(timeoutMs),
+          body: JSON.stringify(payload)
+        }
+      );
+
+      if (gRes.ok) {
+        const gData = await gRes.json();
+        const text = extractGeminiText(gData);
+        if (text) return { ok: true, model: m, text };
+        lastError = `${m}_empty_text`;
+      } else {
+        lastError = `${m}_http_${gRes.status}`;
+        // Retry next model only if this model is unavailable/404
+        if (gRes.status !== 404 && gRes.status !== 400) break;
+      }
+    } catch (err) {
+      lastError = err.message;
+      break;
+    }
+  }
+  return { ok: false, error: lastError };
 }
 
 export function getOllamaConfig() {
@@ -121,43 +161,37 @@ ACWR หลังซ้อม: ${JSON.stringify(pmc)}
 
   // ---- TIER 1: Google Gemini API (Primary) ----
   if (geminiKey) {
-    try {
-      const gRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(geminiModel)}:generateContent?key=${encodeURIComponent(geminiKey)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: AbortSignal.timeout(12000),
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-            generationConfig: {
-              temperature: 0.3,
-              responseMimeType: 'application/json'
-            }
-          })
+    const gOut = await callGeminiGenerate({
+      apiKey: geminiKey,
+      model: geminiModel,
+      timeoutMs: 15000,
+      payload: {
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        generationConfig: {
+          temperature: 0.3,
+          responseMimeType: 'application/json'
         }
-      );
+      }
+    });
 
-      if (gRes.ok) {
-        const gData = await gRes.json();
-        const rawText = gData?.candidates?.[0]?.content?.parts?.[0]?.text;
-        const parsed = parseModelJson(rawText, mode);
+    if (gOut.ok) {
+      try {
+        const parsed = parseModelJson(gOut.text, mode);
         if (parsed) {
           return {
-            provider: `google:${geminiModel}`,
+            provider: `google:${gOut.model}`,
             data: parsed
           };
         }
         lastError = 'gemini_invalid_json';
-      } else {
-        lastError = `gemini_http_${gRes.status}`;
+      } catch (err) {
+        lastError = `gemini_json_parse:${err.message}`;
       }
-      console.warn('Gemini failed:', lastError);
-    } catch (err) {
-      lastError = err.message;
-      console.warn('Gemini error:', err.message);
+    } else {
+      lastError = gOut.error;
     }
+    console.warn('Gemini failed:', lastError);
   }
 
   // ---- TIER 2: Local Ollama via Cloudflare Tunnel (Fallback) ----
@@ -341,42 +375,29 @@ ${Array.isArray(recentWorkouts) && recentWorkouts.length ? `ประวัต�
 
   // ---- TIER 1: Google Gemini Multi-Turn Chat ----
   if (geminiKey) {
-    try {
-      const contents = [
-        ...safeHistory.map((h) => ({
-          role: h.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: h.content.trim() }]
-        })),
-        { role: 'user', parts: [{ text: String(message || '').trim() }] }
-      ];
+    const contents = [
+      ...safeHistory.map((h) => ({
+        role: h.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: h.content.trim() }]
+      })),
+      { role: 'user', parts: [{ text: String(message || '').trim() }] }
+    ];
 
-      const gRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(geminiModel)}:generateContent?key=${encodeURIComponent(geminiKey)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: AbortSignal.timeout(15000),
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents,
-            generationConfig: { temperature: 0.4, maxOutputTokens: 700 }
-          })
-        }
-      );
-
-      if (gRes.ok) {
-        const gData = await gRes.json();
-        const reply = gData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (reply) {
-          return { provider: `google:${geminiModel}`, reply };
-        }
-        lastError = 'gemini_empty_reply';
-      } else {
-        lastError = `gemini_http_${gRes.status}`;
+    const gOut = await callGeminiGenerate({
+      apiKey: geminiKey,
+      model: geminiModel,
+      timeoutMs: 18000,
+      payload: {
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents,
+        generationConfig: { temperature: 0.4, maxOutputTokens: 900 }
       }
-    } catch (err) {
-      lastError = err.message;
+    });
+
+    if (gOut.ok && gOut.text.trim()) {
+      return { provider: `google:${gOut.model}`, reply: gOut.text.trim() };
     }
+    lastError = gOut.error || 'gemini_empty_reply';
   }
 
   // ---- TIER 2: Local Ollama via Cloudflare Tunnel ----
