@@ -391,6 +391,10 @@ export async function upsertMergedWorkout(sb, athlete, baseRecord, extendedField
     .eq('workout_date', baseRecord.workout_date);
 
   const match = (sameDay || []).find((ex) => {
+    // Only fuse across DIFFERENT sources (FIT <-> Apple Health); never merge two distinct FIT files
+    const existingIsFit = String(ex.source || '').includes('fit');
+    if (incomingIsFit === existingIsFit) return false;
+
     const durA = Number(ex.duration_min) || 0;
     const durB = Number(baseRecord.duration_min) || 0;
     const durDiff = Math.abs(durA - durB);
