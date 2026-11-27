@@ -108,10 +108,16 @@ export default async function handler(req, res) {
   // Format B: Direct Apple Shortcuts JSON (supports strings with units, sample arrays, Thai/English durations)
   const sleepInput = body.sleep_samples ?? body.sleep_hours ?? body.sleep_minutes ?? body.sleep ?? null;
   const parsedSleep = parseFlexibleSleep(sleepInput);
-  const directHrv = parseFlexibleNumber(body.hrv, { aggregate: 'avg' });
-  const directRhr = parseFlexibleNumber(body.resting_hr ?? body.rhr, { aggregate: 'avg' });
-  const directWeight = parseFlexibleNumber(body.weight_kg ?? body.weight, { aggregate: 'last' });
-  const directSteps = parseFlexibleNumber(body.steps, { aggregate: 'sum' });
+  const rawHrv = parseFlexibleNumber(body.hrv, { aggregate: 'avg' });
+  // Apple Shortcuts with Unit: None can return HRV in seconds (e.g. 0.064 s -> 64 ms)
+  const directHrv = rawHrv != null && rawHrv > 0 ? (rawHrv < 1 ? rawHrv * 1000 : rawHrv) : null;
+  const rawRhr = parseFlexibleNumber(body.resting_hr ?? body.rhr, { aggregate: 'avg' });
+  const directRhr = rawRhr != null && rawRhr >= 25 && rawRhr <= 220 ? rawRhr : null;
+  const rawWeight = parseFlexibleNumber(body.weight_kg ?? body.weight, { aggregate: 'last' });
+  // Apple Shortcuts with Unit: None can return Weight in grams (e.g. 57000 g -> 57.0 kg)
+  const directWeight = rawWeight != null && rawWeight > 0 ? (rawWeight > 500 ? rawWeight / 1000 : rawWeight) : null;
+  const rawSteps = parseFlexibleNumber(body.steps, { aggregate: 'sum' });
+  const directSteps = rawSteps != null && rawSteps > 0 ? rawSteps : null;
   const directSpo2 = parseFlexibleNumber(body.spo2 ?? body.blood_oxygen, { aggregate: 'avg' });
   const directDeep = parseFlexibleNumber(body.sleep_deep_min, { aggregate: 'sum' });
   const directRem = parseFlexibleNumber(body.sleep_rem_min, { aggregate: 'sum' });
@@ -129,11 +135,11 @@ export default async function handler(req, res) {
   ) {
     const iso = toThaiIsoDate(body.metric_date || today);
     const rec = ensureMetric(iso);
-    if (parsedSleep.sleep_hours != null) rec.base.sleep_hours = parsedSleep.sleep_hours;
+    if (parsedSleep.sleep_hours != null && parsedSleep.sleep_hours > 0) rec.base.sleep_hours = parsedSleep.sleep_hours;
     if (directHrv != null && directHrv > 0) rec.base.hrv = Math.round(directHrv);
     if (directRhr != null && directRhr > 0) rec.base.resting_hr = Math.round(directRhr);
     if (directWeight != null && directWeight > 0) rec.base.weight_kg = +directWeight.toFixed(1);
-    if (directSteps != null && directSteps >= 0) rec.base.steps = Math.round(directSteps);
+    if (directSteps != null && directSteps > 0) rec.base.steps = Math.round(directSteps);
     if (directDeep != null && directDeep > 0) rec.ext.sleep_deep_min = Math.round(directDeep);
     else if (parsedSleep.sleep_deep_min != null) rec.ext.sleep_deep_min = parsedSleep.sleep_deep_min;
     if (directRem != null && directRem > 0) rec.ext.sleep_rem_min = Math.round(directRem);

@@ -495,6 +495,59 @@
           </div>
         </div>
 
+        <!-- 3B. SLEEP & DAILY VITALS SUMMARY CARD (IPHONE / APPLE HEALTH) -->
+        <div id="sleep-vitals-card" class="glass-card rounded-3xl p-5 sm:p-6">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300 shrink-0">
+                <i data-lucide="moon-star" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <h2 class="font-display text-base font-bold text-white">สรุปการนอน &amp; สุขภาพรายวัน (Sleep &amp; Vitals)</h2>
+                  <span id="sleep-card-source-badges" class="inline-flex flex-wrap items-center gap-1"></span>
+                </div>
+                <p id="sleep-card-date" class="text-xs text-indigo-300/80">ยังไม่มีข้อมูลสุขภาพรายวัน — ซิงก์ผ่าน Apple Shortcuts บน iPhone หรือบันทึกด้วยตนเอง</p>
+              </div>
+            </div>
+            <button onclick="openDailyMetricModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-indigo-300 transition-all active:scale-95">
+              <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+              <span>แก้ไข / เพิ่มวันนี้</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div class="col-span-2 sm:col-span-1 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 p-3.5">
+              <p class="text-[11px] text-indigo-300 font-semibold">การนอนหลับ (Sleep)</p>
+              <p id="sc-sleep" class="font-num text-2xl font-extrabold text-white mt-0.5">--</p>
+              <div class="w-full h-1.5 rounded-full bg-slate-800 mt-2 overflow-hidden">
+                <div id="sc-sleep-bar" class="h-full bg-gradient-to-r from-indigo-500 to-cyan-400 transition-all duration-500" style="width: 0%"></div>
+              </div>
+              <p id="sc-sleep-sub" class="text-[10px] text-slate-400 mt-1">เป้าหมาย 8.0 ชม.</p>
+            </div>
+            <div class="rounded-2xl bg-slate-950/75 border border-slate-800 p-3.5">
+              <p class="text-[11px] text-slate-400">หัวใจพัก (RHR)</p>
+              <p id="sc-rhr" class="font-num text-xl font-extrabold text-rose-300 mt-1">--</p>
+              <p id="sc-rhr-sub" class="text-[10px] text-slate-500 mt-1">bpm</p>
+            </div>
+            <div class="rounded-2xl bg-slate-950/75 border border-slate-800 p-3.5">
+              <p class="text-[11px] text-slate-400">ความแปรปรวน (HRV)</p>
+              <p id="sc-hrv" class="font-num text-xl font-extrabold text-emerald-300 mt-1">--</p>
+              <p id="sc-hrv-sub" class="text-[10px] text-slate-500 mt-1">ms</p>
+            </div>
+            <div class="rounded-2xl bg-slate-950/75 border border-slate-800 p-3.5">
+              <p class="text-[11px] text-slate-400">ก้าวเดินวันนี้ (Steps)</p>
+              <p id="sc-steps" class="font-num text-xl font-extrabold text-cyan-300 mt-1">--</p>
+              <p class="text-[10px] text-slate-500 mt-1">ก้าว</p>
+            </div>
+            <div class="rounded-2xl bg-slate-950/75 border border-slate-800 p-3.5">
+              <p class="text-[11px] text-slate-400">น้ำหนัก (Weight)</p>
+              <p id="sc-weight" class="font-num text-xl font-extrabold text-white mt-1">--</p>
+              <p class="text-[10px] text-slate-500 mt-1">กก.</p>
+            </div>
+          </div>
+        </div>
+
         <!-- 4. THREE RESPONSIVE DARK-MODE LINE CHARTS (CONTROLLED BY TIMEFRAME) -->
         <div class="space-y-5">
           <!-- Period Summary Strip -->
@@ -517,15 +570,16 @@
             </div>
           </div>
 
-          <!-- Chart 1: Body Energy % & Resting HR / HRV -->
+          <!-- Chart 1: Body Energy % & Sleep / Resting HR / HRV -->
           <div class="glass-card rounded-3xl p-5 sm:p-6">
             <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
               <div>
-                <h3 class="font-display text-sm sm:text-base font-bold text-white">1. พลังงานร่างกาย &amp; หัวใจพัก (Body Energy % • RHR • HRV)</h3>
-                <p id="c1-sub" class="text-xs text-slate-400">กราฟเส้นเปรียบเทียบระดับพลังงาน (แกนซ้าย %) กับ RHR / HRV (แกนขวา)</p>
+                <h3 class="font-display text-sm sm:text-base font-bold text-white">1. พลังงานร่างกาย • การนอน • หัวใจพัก (Energy % • Sleep • RHR • HRV)</h3>
+                <p id="c1-sub" class="text-xs text-slate-400">กราฟเส้นเปรียบเทียบระดับพลังงาน (%) ชั่วโมงการนอน (ชม.) และ RHR / HRV</p>
               </div>
-              <div class="flex items-center gap-3 text-[11px]">
+              <div class="flex flex-wrap items-center gap-3 text-[11px]">
                 <span class="flex items-center gap-1.5 text-emerald-400"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>Energy %</span>
+                <span class="flex items-center gap-1.5 text-indigo-400"><span class="w-2.5 h-2.5 rounded-full bg-indigo-400"></span>Sleep (ชม.)</span>
                 <span class="flex items-center gap-1.5 text-cyan-400"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>HRV (ms)</span>
                 <span class="flex items-center gap-1.5 text-rose-400"><span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>RHR (bpm)</span>
               </div>
@@ -868,6 +922,21 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Imported Daily Sleep & Vitals History (from iPhone / Apple Health) -->
+        <div class="glass-card rounded-3xl p-5 sm:p-6">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div>
+              <h3 class="font-display text-base font-bold text-white">ประวัติการนอน &amp; สุขภาพรายวัน (Apple Health / iPhone)</h3>
+              <p id="import-metrics-sub" class="text-xs text-slate-400">แสดงค่าการนอน, HRV, RHR, น้ำหนัก และก้าวเดินที่ซิงก์เข้ามาในฐานข้อมูล</p>
+            </div>
+            <button onclick="openDailyMetricModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-xs font-semibold text-indigo-300 transition-all active:scale-95">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              <span>บันทึกสุขภาพเพิ่ม</span>
+            </button>
+          </div>
+          <div id="import-metrics-list" class="space-y-2"></div>
         </div>
 
         <!-- Imported Data Table (Shows all workouts currently stored in DB) -->
@@ -1488,13 +1557,13 @@
       const hrvBase = base14 ? base14.hrvBase : Number(athlete.hrv_baseline);
       const rhrBase = base14 ? base14.rhrBase : Number(athlete.resting_hr);
 
-      const sleepPts = metric.sleep_hours != null
+      const sleepPts = Number(metric.sleep_hours) > 0
         ? clamp((Number(metric.sleep_hours) / targetSleep) * 100, 15, 100)
         : 75;
-      const hrvPts = metric.hrv != null && hrvBase > 0
+      const hrvPts = Number(metric.hrv) > 0 && hrvBase > 0
         ? clamp(80 + ((Number(metric.hrv) / hrvBase) - 1) * 95, 15, 100)
         : 75;
-      const rhrPts = metric.resting_hr != null
+      const rhrPts = Number(metric.resting_hr) > 0
         ? clamp(92 - (Number(metric.resting_hr) - rhrBase) * 6, 15, 100)
         : 75;
       const tsbPts = clamp(82 + (tsb || 0) * 1.4, 20, 100);
@@ -1566,9 +1635,9 @@
           acwr: acwr !== null ? +acwr.toFixed(2) : null,
           energy,
           energyEstimated: !m && energy !== null,
-          rhr: m?.resting_hr != null ? Number(m.resting_hr) : null,
-          hrv: m?.hrv != null ? Number(m.hrv) : null,
-          sleep: m?.sleep_hours != null ? Number(m.sleep_hours) : null,
+          rhr: Number(m?.resting_hr) > 0 ? Number(m.resting_hr) : null,
+          hrv: Number(m?.hrv) > 0 ? Number(m.hrv) : null,
+          sleep: Number(m?.sleep_hours) > 0 ? Number(m.sleep_hours) : null,
           ef: efs.length ? +(efs.reduce((a, b) => a + b, 0) / efs.length).toFixed(2) : null,
           wkg: wkgs.length ? +(wkgs.reduce((a, b) => a + b, 0) / wkgs.length).toFixed(2) : null
         });
@@ -1650,6 +1719,7 @@
           tsb: last.tsb,
           acwr: avgField(b.items, 'acwr'),
           energy: avgField(b.items, 'energy') !== null ? Math.round(avgField(b.items, 'energy')) : null,
+          sleep: avgField(b.items, 'sleep'),
           rhr: avgField(b.items, 'rhr') !== null ? Math.round(avgField(b.items, 'rhr')) : null,
           hrv: avgField(b.items, 'hrv') !== null ? Math.round(avgField(b.items, 'hrv')) : null,
           ef: avgField(b.items, 'ef'),
@@ -2762,12 +2832,53 @@
         renderBadgePillsSafe(batBadgesEl, dashBadges);
       }
 
-      // 5 Vital Pills under SVG
-      document.getElementById('bat-sleep').textContent = latestMetric?.sleep_hours != null ? `${latestMetric.sleep_hours}ช.` : '--';
-      document.getElementById('bat-hrv').textContent = latestMetric?.hrv != null ? `${latestMetric.hrv}` : '--';
-      document.getElementById('bat-rhr').textContent = latestMetric?.resting_hr != null ? `${latestMetric.resting_hr}` : '--';
-      document.getElementById('bat-weight').textContent = `${latestMetric?.weight_kg || ath.weight_kg}`;
+      // 5 Vital Pills under SVG + Dedicated Sleep & Daily Vitals Card
+      const normWeight = (w) => {
+        const n = Number(w);
+        if (!n || n <= 0) return null;
+        return n > 500 ? +(n / 1000).toFixed(1) : +n.toFixed(1);
+      };
+      const dispWeight = normWeight(latestMetric?.weight_kg) || normWeight(ath.weight_kg) || ath.weight_kg;
+      const dispSleep = Number(latestMetric?.sleep_hours) > 0 ? Number(latestMetric.sleep_hours) : null;
+      const dispHrv = Number(latestMetric?.hrv) > 0 ? Number(latestMetric.hrv) : null;
+      const dispRhr = Number(latestMetric?.resting_hr) > 0 ? Number(latestMetric.resting_hr) : null;
+      const dispSteps = Number(latestMetric?.steps) > 0 ? Number(latestMetric.steps) : null;
+
+      document.getElementById('bat-sleep').textContent = dispSleep != null ? `${dispSleep}ช.` : '--';
+      document.getElementById('bat-hrv').textContent = dispHrv != null ? `${dispHrv}` : '--';
+      document.getElementById('bat-rhr').textContent = dispRhr != null ? `${dispRhr}` : '--';
+      document.getElementById('bat-weight').textContent = `${dispWeight}`;
       document.getElementById('bat-acwr').textContent = latestPmc?.acwr != null ? latestPmc.acwr.toFixed(2) : '--';
+
+      // Populate dedicated Sleep & Daily Vitals Card
+      const targetSleepH = age < 14 ? 9.5 : 8.0;
+      const scDateEl = document.getElementById('sleep-card-date');
+      const scBadgesEl = document.getElementById('sleep-card-source-badges');
+      if (latestMetric) {
+        const isIphoneM = latestMetric.source === 'iphone_apple_health' || dispSteps != null || latestMetric.sleep_deep_min != null || latestMetric.spo2 != null;
+        renderBadgePillsSafe(scBadgesEl, [
+          isIphoneM
+            ? { label: '📱 มือถือ iPhone', cls: 'bg-rose-500/15 text-rose-300 border-rose-500/35' }
+            : { label: '✏️ กรอกเอง', cls: 'bg-slate-800 text-slate-300 border-slate-700' }
+        ]);
+        scDateEl.textContent = `อัปเดตล่าสุด ณ วันที่ ${formatThaiDate(latestMetric.metric_date)}${latestMetric.spo2 > 0 ? ` • SpO2 ${latestMetric.spo2}%` : ''}`;
+      } else {
+        renderBadgePillsSafe(scBadgesEl, []);
+        scDateEl.textContent = 'ยังไม่มีข้อมูลสุขภาพรายวัน — ซิงก์ผ่าน Apple Shortcuts บน iPhone หรือบันทึกด้วยตนเอง';
+      }
+      document.getElementById('sc-sleep').textContent = dispSleep != null ? `${dispSleep} ชม.` : '--';
+      const sleepPct = dispSleep != null ? clamp(Math.round((dispSleep / targetSleepH) * 100), 5, 100) : 0;
+      document.getElementById('sc-sleep-bar').style.width = `${sleepPct}%`;
+      const deepRemText = (latestMetric?.sleep_deep_min > 0 || latestMetric?.sleep_rem_min > 0)
+        ? `Deep ${latestMetric.sleep_deep_min || 0}น. • REM ${latestMetric.sleep_rem_min || 0}น.`
+        : `เป้าหมาย ${targetSleepH} ชม.${dispSleep != null ? ` (${sleepPct}%)` : ''}`;
+      document.getElementById('sc-sleep-sub').textContent = deepRemText;
+      document.getElementById('sc-rhr').textContent = dispRhr != null ? `${dispRhr}` : '--';
+      document.getElementById('sc-rhr-sub').textContent = dispRhr != null ? `ฐาน ${base14.rhrBase} bpm` : 'bpm';
+      document.getElementById('sc-hrv').textContent = dispHrv != null ? `${dispHrv}` : '--';
+      document.getElementById('sc-hrv-sub').textContent = dispHrv != null ? `ฐาน ${base14.hrvBase} ms` : 'รอค่า HRV จาก iPhone';
+      document.getElementById('sc-steps').textContent = dispSteps != null ? dispSteps.toLocaleString('en-US') : '--';
+      document.getElementById('sc-weight').textContent = `${dispWeight}`;
 
       // 3. Daily Coach Brief (4 Blunt Blocks — AI Coach + Supabase Cache + Rule-Based Fallback)
       const daily = generateDailyCoachAnalysis(ath, latestMetric, base14, latestPmc, readiness);
@@ -2837,8 +2948,8 @@
       const tickStyle = { color: '#94a3b8', font: { size: 11, family: 'JetBrains Mono' } };
       const ptRad = points.length <= 14 ? 4 : (points.length <= 45 ? 2.5 : 1.5);
 
-      // ---- CHART 1: Body Energy % & RHR / HRV ----
-      const hasVitals = points.some(p => p.energy !== null || p.rhr !== null || p.hrv !== null);
+      // ---- CHART 1: Body Energy %, Sleep & RHR / HRV ----
+      const hasVitals = points.some(p => p.energy !== null || p.sleep !== null || p.rhr !== null || p.hrv !== null);
       document.getElementById('chart1-empty').classList.toggle('hidden', hasVitals);
       document.getElementById('chart1-wrap').classList.toggle('hidden', !hasVitals);
 
@@ -2859,6 +2970,17 @@
                 spanGaps: true,
                 pointRadius: ptRad,
                 yAxisID: 'y'
+              },
+              {
+                label: 'Sleep (ชม.)',
+                data: points.map(p => p.sleep),
+                borderColor: '#818cf8',
+                backgroundColor: 'rgba(129, 140, 248, 0.16)',
+                borderWidth: 2.3,
+                tension: 0.35,
+                spanGaps: true,
+                pointRadius: Math.max(ptRad, 4),
+                yAxisID: 'y2'
               },
               {
                 label: 'HRV (ms)',
@@ -2890,7 +3012,8 @@
             scales: {
               x: { grid: { display: false }, ticks: { ...tickStyle, maxTicksLimit: 9 } },
               y: { position: 'left', min: 0, max: 100, grid: { color: gridColor }, ticks: tickStyle },
-              y1: { position: 'right', grid: { display: false }, ticks: tickStyle }
+              y1: { position: 'right', grid: { display: false }, ticks: tickStyle },
+              y2: { display: false, min: 0, max: 14 }
             }
           }
         });
@@ -3938,6 +4061,61 @@
 
       const subEl = document.getElementById('import-history-sub');
       subEl.textContent = `พบ ${workouts.length} รายการในฐานข้อมูล Supabase ของ ${ath.name} (เรียงจากล่าสุด)`;
+
+      // Populate Daily Sleep & Vitals History list on Import Page
+      const mSubEl = document.getElementById('import-metrics-sub');
+      const mListEl = document.getElementById('import-metrics-list');
+      if (mSubEl) mSubEl.textContent = `พบข้อมูลสุขภาพและการนอน ${metrics.length} วัน ของ ${ath.name}`;
+      if (mListEl) {
+        if (metrics.length === 0) {
+          const emptyM = document.createElement('div');
+          emptyM.className = 'rounded-2xl bg-slate-950/60 border border-slate-800 p-6 text-center text-xs text-slate-400';
+          emptyM.textContent = 'ยังไม่มีข้อมูลการนอนและสุขภาพรายวัน — ซิงก์ผ่าน Apple Shortcuts บน iPhone หรือกดบันทึกสุขภาพเพิ่ม';
+          mListEl.replaceChildren(emptyM);
+        } else {
+          const mRows = metrics.slice(0, 30).map(m => {
+            const row = document.createElement('div');
+            row.className = 'flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-slate-950/75 border border-indigo-500/20 px-4 py-3';
+            const left = document.createElement('div');
+            left.className = 'flex flex-wrap items-center gap-2';
+
+            const dSpan = document.createElement('span');
+            dSpan.className = 'font-num text-xs font-bold text-indigo-300';
+            dSpan.textContent = formatThaiDate(m.metric_date);
+
+            const isIphoneM = m.source === 'iphone_apple_health' || Number(m.steps) > 0 || m.sleep_deep_min != null || m.spo2 != null;
+            const bSpan = document.createElement('span');
+            bSpan.className = isIphoneM
+              ? 'px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-rose-500/15 text-rose-300 border-rose-500/35'
+              : 'px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-slate-800 text-slate-300 border-slate-700';
+            bSpan.textContent = isIphoneM ? '📱 มือถือ iPhone' : '✏️ กรอกเอง';
+
+            left.append(dSpan, bSpan);
+
+            const right = document.createElement('div');
+            right.className = 'flex flex-wrap items-center gap-2 font-num text-[11px]';
+            const wNorm = Number(m.weight_kg) > 500 ? +(Number(m.weight_kg) / 1000).toFixed(1) : Number(m.weight_kg);
+            const items = [
+              Number(m.sleep_hours) > 0 ? { txt: `🌙 นอน ${m.sleep_hours} ชม.`, cls: 'text-indigo-300 font-bold' } : null,
+              Number(m.resting_hr) > 0 ? { txt: `❤️ RHR ${m.resting_hr}`, cls: 'text-rose-300' } : null,
+              Number(m.hrv) > 0 ? { txt: `⚡ HRV ${m.hrv} ms`, cls: 'text-emerald-300' } : null,
+              Number(m.steps) > 0 ? { txt: `👣 ${Number(m.steps).toLocaleString('en-US')} ก้าว`, cls: 'text-cyan-300' } : null,
+              wNorm > 0 ? { txt: `⚖️ ${wNorm} กก.`, cls: 'text-slate-300' } : null
+            ].filter(Boolean);
+
+            items.forEach(it => {
+              const s = document.createElement('span');
+              s.className = `px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 ${it.cls}`;
+              s.textContent = it.txt;
+              right.appendChild(s);
+            });
+
+            row.append(left, right);
+            return row;
+          });
+          mListEl.replaceChildren(...mRows);
+        }
+      }
 
       const listEl = document.getElementById('import-history-list');
       if (workouts.length === 0) {
