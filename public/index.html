@@ -1,0 +1,3485 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ATHLETE OS — Family Performance Hub (Production)</title>
+
+  <!-- Google Fonts: Prompt, Sarabun, Inter, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&family=Prompt:wght@500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Sarabun"', '"Inter"', 'sans-serif'],
+            display: ['"Prompt"', '"Inter"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Supabase JS v2 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    html, body {
+      background-color: #070b14;
+      color: #f8fafc;
+      font-family: 'Sarabun', 'Inter', sans-serif;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .font-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    .cyber-grid {
+      background-image:
+        linear-gradient(to right, rgba(30, 41, 59, 0.2) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(30, 41, 59, 0.2) 1px, transparent 1px);
+      background-size: 36px 36px;
+    }
+    .glass-card {
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.88) 0%, rgba(10, 15, 29, 0.96) 100%);
+      border: 1px solid rgba(51, 65, 85, 0.52);
+      box-shadow: 0 14px 36px -16px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .glass-accent {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(6, 182, 212, 0.06) 55%, rgba(15, 23, 42, 0.95) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.28);
+    }
+    .glass-workout-coach {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.09) 0%, rgba(15, 23, 42, 0.96) 65%);
+      border: 1px solid rgba(34, 211, 238, 0.28);
+    }
+
+    /* Liquid Wave & Scanline Animations for Body Battery SVG */
+    @keyframes waveFlow {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-110px); }
+    }
+    .wave-fast { animation: waveFlow 3.2s linear infinite; }
+    .wave-slow { animation: waveFlow 5.4s linear infinite reverse; }
+
+    @keyframes scanMove {
+      0% { transform: translateY(32px); opacity: 0; }
+      12% { opacity: 0.9; }
+      88% { opacity: 0.9; }
+      100% { transform: translateY(394px); opacity: 0; }
+    }
+    .scan-line { animation: scanMove 4s ease-in-out infinite; }
+
+    @keyframes pulseRing {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.45); opacity: 0.35; }
+    }
+    .heart-ring {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: pulseRing 1.5s ease-in-out infinite;
+    }
+
+    #energy-fill-group {
+      transition: transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .tab-pane {
+      animation: fadeUp 0.2s ease-out;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #070b14; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 999px; }
+  </style>
+</head>
+<body class="min-h-screen bg-[#070b14] text-slate-100 cyber-grid pb-24 lg:pb-12 selection:bg-emerald-500/30 selection:text-emerald-200">
+
+  <!-- Ambient Glow -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    <div id="bg-glow-1" class="absolute -top-36 -left-36 w-[440px] h-[440px] bg-emerald-500/10 rounded-full blur-[130px] transition-colors duration-700"></div>
+    <div id="bg-glow-2" class="absolute bottom-0 -right-32 w-[420px] h-[420px] bg-cyan-500/10 rounded-full blur-[130px] transition-colors duration-700"></div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- TOP HEADER BAR                                            -->
+  <!-- ========================================================= -->
+  <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-[#070b14]/92 backdrop-blur-xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+
+        <!-- Brand & Profile Switcher -->
+        <div class="flex items-center gap-3 min-w-0 flex-1">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 shrink-0">
+            <i data-lucide="activity" class="w-5 h-5 text-slate-950 stroke-[2.5]"></i>
+          </div>
+          <div class="hidden sm:block shrink-0">
+            <h1 class="font-display text-sm font-extrabold tracking-tight text-white leading-none">ATHLETE OS</h1>
+            <p class="text-[11px] text-cyan-400/90 mt-0.5">Family Performance Hub</p>
+          </div>
+
+          <!-- Profile Switcher Dropdown -->
+          <div class="relative flex-1 sm:flex-none sm:w-64 min-w-[165px] max-w-xs ml-1">
+            <button id="profile-dropdown-btn" onclick="toggleProfileDropdown()" class="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 transition-all text-left">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <div id="top-avatar" class="w-7 h-7 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-300 shrink-0">?</div>
+                <div class="min-w-0">
+                  <p id="top-name" class="text-xs font-bold text-white truncate">ยังไม่มีสมาชิก</p>
+                  <p id="top-meta" class="text-[10px] text-slate-400 truncate">เพิ่มสมาชิกเพื่อเริ่มต้น</p>
+                </div>
+              </div>
+              <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 shrink-0"></i>
+            </button>
+
+            <div id="profile-dropdown-menu" class="hidden absolute left-0 mt-2 w-72 rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl p-2 z-50">
+              <div class="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                <span>สมาชิกครอบครัว (2–10 คน)</span>
+                <span id="top-member-count" class="font-num text-emerald-400">0/10</span>
+              </div>
+              <div id="profile-dropdown-list" class="space-y-1 max-h-64 overflow-y-auto my-1"></div>
+              <div class="pt-1.5 mt-1 border-t border-slate-800">
+                <button onclick="toggleProfileDropdown(false); openAthleteModal();" class="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-xs font-semibold transition-all">
+                  <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+                  <span>+ เพิ่มสมาชิกใหม่</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Global Right Controls -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="copyPersonalUrl()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-xs font-medium text-cyan-300 transition-all active:scale-95" title="คัดลอกลิงก์ส่วนตัว (?u=slug)">
+            <i data-lucide="link-2" class="w-3.5 h-3.5"></i>
+            <span class="hidden md:inline">คัดลอกลิงก์ส่วนตัว</span>
+          </button>
+
+          <button onclick="openSupabaseModal()" id="sb-status-btn" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-xs font-semibold text-amber-300 transition-all active:scale-95">
+            <span id="sb-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+            <span id="sb-status-text" class="hidden sm:inline">ยังไม่เชื่อมต่อ Supabase</span>
+            <span id="sb-status-short" class="sm:hidden">ตั้งค่า DB</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Desktop 3-Tab Navigation -->
+      <div class="hidden lg:flex items-center justify-between mt-3 pt-3 border-t border-slate-800/70">
+        <nav class="flex items-center gap-1.5">
+          <button onclick="switchTab('dashboard')" data-tab="dashboard" class="nav-btn px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all">
+            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+            <span>แดชบอร์ด (Dashboard)</span>
+          </button>
+          <button onclick="switchTab('workouts')" data-tab="workouts" class="nav-btn px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all">
+            <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+            <span>บันทึก &amp; วิเคราะห์ Workout</span>
+          </button>
+          <button onclick="switchTab('settings')" data-tab="settings" class="nav-btn px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all">
+            <i data-lucide="settings-2" class="w-4 h-4"></i>
+            <span>สมาชิก &amp; ตั้งค่าระบบ</span>
+          </button>
+        </nav>
+
+        <div class="flex items-center gap-2">
+          <button onclick="openDailyMetricModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-emerald-300 transition-all active:scale-95">
+            <i data-lucide="heart-pulse" class="w-3.5 h-3.5"></i>
+            <span>บันทึกสุขภาพวันนี้</span>
+          </button>
+          <button onclick="openWorkoutModal()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition-all active:scale-95">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>เพิ่ม Workout</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================= -->
+  <!-- MAIN CONTAINER                                            -->
+  <!-- ========================================================= -->
+  <main class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- Local-only Persistence Warning Banner -->
+    <div id="local-warning-banner" class="hidden mb-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-start gap-2.5 text-xs text-amber-200">
+        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i>
+        <div>
+          <p class="font-bold text-amber-300">โหมด Local Storage ชั่วคราว (ยังไม่ได้เชื่อมต่อ Supabase)</p>
+          <p class="text-amber-200/80 mt-0.5">เชื่อมต่อ Supabase เพื่อเก็บข้อมูลถาวร ใช้งานร่วมกันทั้งครอบครัวผ่านลิงก์ <code class="font-num">?u=slug</code> และรองรับ Auto-Sync จาก Zepp / Apple Health</p>
+        </div>
+      </div>
+      <button onclick="openSupabaseModal()" class="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs shrink-0 transition-all active:scale-95">
+        เชื่อมต่อ Supabase
+      </button>
+    </div>
+
+    <!-- Global Empty State (0 athletes) -->
+    <div id="global-empty-athletes" class="hidden glass-card rounded-3xl p-8 sm:p-12 text-center max-w-2xl mx-auto my-6">
+      <div class="w-16 h-16 rounded-3xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto mb-4">
+        <i data-lucide="users" class="w-8 h-8"></i>
+      </div>
+      <h2 class="font-display text-xl font-bold text-white mb-2">ATHLETE OS — Production Mode</h2>
+      <p class="text-sm text-slate-400 mb-6 leading-relaxed">
+        ระบบพร้อมใช้งานจริงโดยไม่มีข้อมูลจำลอง เริ่มต้นด้วยการเชื่อมต่อ Supabase หรือสร้างโปรไฟล์สมาชิกคนแรกเพื่อบันทึกสุขภาพและนำเข้าไฟล์ <code class="font-num text-cyan-300">.GPX</code> จาก Zepp / Amazfit ได้ทันที
+      </p>
+      <div class="flex flex-wrap items-center justify-center gap-3">
+        <button onclick="openSupabaseModal()" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-semibold text-cyan-300 transition-all">
+          <i data-lucide="database" class="w-4 h-4"></i>
+          <span>1. เชื่อมต่อ Supabase</span>
+        </button>
+        <button onclick="openAthleteModal()" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all">
+          <i data-lucide="user-plus" class="w-4 h-4"></i>
+          <span>2. สร้างโปรไฟล์สมาชิกคนแรก</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Athlete Content Wrapper -->
+    <div id="athlete-content-wrapper">
+
+      <!-- Active Athlete Physiology Strip -->
+      <div id="active-athlete-strip" class="hidden mb-5 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 bg-slate-900/75 border border-slate-800 rounded-2xl px-4 py-2.5">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span id="strip-name" class="text-white font-display font-bold"></span>
+          <span class="text-slate-600">•</span>
+          <span id="strip-physio" class="font-num text-[11px]"></span>
+        </div>
+        <span id="strip-trimp-formula" class="px-2.5 py-0.5 rounded-lg text-[11px] font-medium border"></span>
+      </div>
+
+      <!-- ========================================================= -->
+      <!-- TAB 1: แดชบอร์ด (DASHBOARD)                               -->
+      <!-- ========================================================= -->
+      <section id="view-dashboard" class="tab-pane space-y-6">
+
+        <!-- 1. GLOBAL TIMEFRAME SELECTOR (DEFAULT: 1W) -->
+        <div class="glass-card rounded-2xl p-2.5 sm:px-4 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <i data-lucide="calendar-range" class="w-4 h-4 text-cyan-400 shrink-0"></i>
+            <span class="text-xs font-semibold text-slate-300">ช่วงเวลาแสดงกราฟ:</span>
+            <span id="tf-summary-label" class="font-num text-[11px] text-slate-400 hidden sm:inline">ย้อนหลัง 7 วัน</span>
+          </div>
+          <div class="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 w-full sm:w-auto" id="timeframe-bar">
+            <button onclick="setTimeframe('1D')" data-tf="1D" class="tf-btn px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all">1 วัน</button>
+            <button onclick="setTimeframe('1W')" data-tf="1W" class="tf-btn px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all">1 สัปดาห์</button>
+            <button onclick="setTimeframe('1M')" data-tf="1M" class="tf-btn px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all">1 เดือน</button>
+            <button onclick="setTimeframe('1Y')" data-tf="1Y" class="tf-btn px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all">1 ปี</button>
+            <button onclick="setTimeframe('2Y')" data-tf="2Y" class="tf-btn px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all">2 ปี</button>
+            <button onclick="setTimeframe('3Y')" data-tf="3Y" class="tf-btn px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all">3 ปี</button>
+            <button onclick="setTimeframe('ALL')" data-tf="ALL" class="tf-btn px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all">ทั้งหมด</button>
+          </div>
+        </div>
+
+        <!-- 2. HERO ROW: BODY ENERGY BATTERY SVG + DAILY COACHING BRIEF -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+
+          <!-- LEFT: AUTO-DETECTED BODY ENERGY BATTERY -->
+          <div class="lg:col-span-5 glass-card rounded-3xl p-5 sm:p-6 flex flex-col items-center justify-between relative overflow-hidden">
+            <div class="w-full flex items-center justify-between gap-2 mb-1">
+              <div>
+                <p class="text-[10px] font-num uppercase tracking-widest text-slate-400">Body Energy Battery</p>
+                <h2 class="font-display text-base font-bold text-white">ค่าพลังงานร่างกาย</h2>
+              </div>
+              <span id="body-profile-badge" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-900 border border-slate-700 text-cyan-300">
+                โปรไฟล์: --
+              </span>
+            </div>
+
+            <!-- Score & Status -->
+            <div class="w-full flex items-end justify-between px-1 mt-1">
+              <div class="flex items-baseline gap-1">
+                <span id="battery-score" class="font-num text-5xl sm:text-6xl font-extrabold text-white tracking-tight leading-none">--</span>
+                <span id="battery-unit" class="font-num text-xl font-bold text-slate-500">%</span>
+              </div>
+              <div class="text-right">
+                <span id="battery-status-pill" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                  รอข้อมูลสุขภาพ
+                </span>
+                <p id="battery-date-sub" class="text-[11px] text-slate-400 mt-1">ยังไม่มีบันทึกค่าสุขภาพ</p>
+              </div>
+            </div>
+
+            <!-- SVG Human Wireframe Battery -->
+            <div class="relative w-full max-w-[245px] aspect-[240/420] my-1.5 flex items-center justify-center">
+              <svg id="body-battery-svg" viewBox="0 0 240 420" class="w-full h-full">
+                <defs>
+                  <linearGradient id="energy-grad" x1="0" y1="1" x2="0" y2="0">
+                    <stop id="g-stop-1" offset="0%" stop-color="#059669" />
+                    <stop id="g-stop-2" offset="55%" stop-color="#10b981" />
+                    <stop id="g-stop-3" offset="100%" stop-color="#22d3ee" />
+                  </linearGradient>
+                  <pattern id="battery-bars" width="240" height="14" patternUnits="userSpaceOnUse">
+                    <rect x="0" y="0" width="240" height="10.5" fill="transparent" />
+                    <rect x="0" y="10.5" width="240" height="3.5" fill="rgba(7, 11, 20, 0.58)" />
+                  </pattern>
+                  <linearGradient id="scan-grad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="transparent" />
+                    <stop id="scan-stop" offset="50%" stop-color="#22d3ee" />
+                    <stop offset="100%" stop-color="transparent" />
+                  </linearGradient>
+                  <clipPath id="silhouette-clip">
+                    <path id="svg-clip-path" d="" />
+                  </clipPath>
+                </defs>
+
+                <!-- Telemetry Scale -->
+                <g class="font-num text-[9px] fill-slate-500" opacity="0.75">
+                  <line x1="195" y1="35" x2="210" y2="35" stroke="#334155" stroke-width="1" /><text x="213" y="38">100%</text>
+                  <line x1="201" y1="126" x2="210" y2="126" stroke="#334155" stroke-width="1" /><text x="213" y="129">75%</text>
+                  <line x1="197" y1="217" x2="210" y2="217" stroke="#334155" stroke-width="1" /><text x="213" y="220">50%</text>
+                  <line x1="201" y1="308" x2="210" y2="308" stroke="#334155" stroke-width="1" /><text x="213" y="311">25%</text>
+                  <line x1="195" y1="400" x2="210" y2="400" stroke="#334155" stroke-width="1" /><text x="213" y="403">0%</text>
+                  <line x1="205" y1="35" x2="205" y2="400" stroke="#1e293b" stroke-width="1" stroke-dasharray="2 4" />
+                </g>
+
+                <ellipse cx="110" cy="404" rx="56" ry="8" fill="none" stroke="rgba(56, 189, 248, 0.22)" stroke-width="1.2" />
+                <path id="svg-base-path" d="" fill="rgba(15, 23, 42, 0.85)" />
+
+                <g id="svg-liquid-container" clip-path="url(#silhouette-clip)" opacity="0">
+                  <g id="energy-fill-group" transform="translate(0, 410)">
+                    <path class="wave-slow" d="M 0 10 Q 27.5 2, 55 10 T 110 10 T 165 10 T 220 10 T 275 10 T 330 10 L 330 430 L 0 430 Z" fill="url(#energy-grad)" opacity="0.45" />
+                    <path class="wave-fast" d="M 0 12 Q 27.5 19, 55 12 T 110 12 T 165 12 T 220 12 T 275 12 T 330 12 L 330 430 L 0 430 Z" fill="url(#energy-grad)" opacity="0.92" />
+                  </g>
+                  <rect x="0" y="0" width="240" height="420" fill="url(#battery-bars)" />
+                  <g class="scan-line"><rect x="20" y="0" width="180" height="2.5" fill="url(#scan-grad)" /></g>
+                </g>
+
+                <path id="svg-outline-path" d="" fill="none" stroke="#475569" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" />
+
+                <g opacity="0.82">
+                  <line id="svg-spine" x1="110" y1="95" x2="110" y2="215" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-dasharray="3 4" />
+                  <circle id="svg-heart-ring" class="heart-ring" cx="118" cy="134" r="6.5" fill="none" stroke="#f43f5e" stroke-width="1.4" />
+                  <circle id="svg-heart-dot" cx="118" cy="134" r="2.8" fill="#f43f5e" />
+                </g>
+              </svg>
+            </div>
+
+            <!-- 5 Compact Vital Pills -->
+            <div class="w-full grid grid-cols-5 gap-1.5 text-center mb-3">
+              <div class="bg-slate-950/80 border border-slate-800/80 rounded-xl p-1.5">
+                <p class="text-[9px] text-slate-400">นอน</p>
+                <p id="bat-sleep" class="font-num text-[11px] font-bold text-indigo-300">--</p>
+              </div>
+              <div class="bg-slate-950/80 border border-slate-800/80 rounded-xl p-1.5">
+                <p class="text-[9px] text-slate-400">HRV</p>
+                <p id="bat-hrv" class="font-num text-[11px] font-bold text-emerald-300">--</p>
+              </div>
+              <div class="bg-slate-950/80 border border-slate-800/80 rounded-xl p-1.5">
+                <p class="text-[9px] text-slate-400">RHR</p>
+                <p id="bat-rhr" class="font-num text-[11px] font-bold text-cyan-300">--</p>
+              </div>
+              <div class="bg-slate-950/80 border border-slate-800/80 rounded-xl p-1.5">
+                <p class="text-[9px] text-slate-400">น้ำหนัก</p>
+                <p id="bat-weight" class="font-num text-[11px] font-bold text-white">--</p>
+              </div>
+              <div class="bg-slate-950/80 border border-slate-800/80 rounded-xl p-1.5">
+                <p class="text-[9px] text-slate-400">ACWR</p>
+                <p id="bat-acwr" class="font-num text-[11px] font-bold text-amber-300">--</p>
+              </div>
+            </div>
+
+            <button onclick="openDailyMetricModal()" class="w-full py-2.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-emerald-300 flex items-center justify-center gap-2 transition-all active:scale-95">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i>
+              <span id="battery-cta-label">บันทึกค่าสุขภาพวันนี้</span>
+            </button>
+          </div>
+
+          <!-- RIGHT: บทวิเคราะห์ประจำวัน (DAILY COACH BRIEF — 4 CRISP BLOCKS) -->
+          <div class="lg:col-span-7 flex flex-col gap-5">
+            <div class="glass-accent rounded-3xl p-5 sm:p-6 flex-1 flex flex-col justify-between">
+              <div>
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shrink-0">
+                      <i data-lucide="shield-alert" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                      <h2 class="font-display text-base font-bold text-white">บทวิเคราะห์ประจำวัน (Daily Coach Brief)</h2>
+                      <p class="text-[11px] text-emerald-300/80">ประเมินตรงไปตรงมาจาก HRV, RHR, การนอน เทียบฐาน 14 วัน และโหลดสะสมจริง</p>
+                    </div>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span id="daily-ai-provider" class="px-2.5 py-1 rounded-full text-[10px] font-num font-semibold bg-slate-900/90 border border-slate-700 text-slate-400">Rule-Based</span>
+                    <button id="daily-ai-refresh-btn" onclick="refreshDailyAiCoach()" class="hidden inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 transition-all active:scale-95" title="สร้างบทวิเคราะห์ใหม่ด้วย AI Coach">
+                      <i data-lucide="sparkles" class="w-3 h-3"></i>
+                      <span>วิเคราะห์ AI ใหม่</span>
+                    </button>
+                    <span id="daily-verdict-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-slate-900 border border-slate-700 text-slate-400">รอข้อมูล</span>
+                  </div>
+                </div>
+
+                <!-- 4 Crisp Data-Driven Coaching Blocks -->
+                <div id="daily-coach-blocks" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <!-- Populated dynamically -->
+                </div>
+              </div>
+
+              <!-- Karvonen 5-Zone Compact Bar -->
+              <div class="mt-4 pt-4 border-t border-slate-800/80">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-[11px] font-semibold text-slate-300">โซนหัวใจ Karvonen HRR เฉพาะบุคคล</span>
+                  <span id="karvonen-meta" class="font-num text-[11px] text-slate-400">Max -- / RHR --</span>
+                </div>
+                <div id="karvonen-zones-box" class="grid grid-cols-5 gap-1.5 text-center"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. LATEST POST-WORKOUT COACHING ANALYSIS CARD -->
+        <div class="glass-workout-coach rounded-3xl p-5 sm:p-6">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-2xl bg-cyan-500/20 border border-cyan-400/30 flex items-center justify-center text-cyan-300 shrink-0">
+                <i data-lucide="whistle" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h2 class="font-display text-base font-bold text-white">บทวิเคราะห์ Workout ล่าสุด (Post-Workout Coach)</h2>
+                <p id="latest-wo-subtitle" class="text-xs text-cyan-300/80">ยังไม่มีประวัติ Workout</p>
+              </div>
+            </div>
+            <div id="latest-wo-actions" class="hidden flex flex-wrap items-center gap-2">
+              <span id="latest-wo-ai-provider" class="px-2.5 py-1 rounded-full text-[10px] font-num font-semibold bg-slate-900/90 border border-slate-700 text-slate-400">Rule-Based</span>
+              <button id="latest-wo-ai-refresh-btn" onclick="refreshLatestWorkoutAiCoach()" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-[11px] font-semibold text-cyan-300 transition-all active:scale-95" title="สร้างบทวิเคราะห์ Workout ใหม่ด้วย AI Coach">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                <span>วิเคราะห์ AI ใหม่</span>
+              </button>
+              <button onclick="copyLatestWorkoutReport()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-cyan-300 transition-all active:scale-95">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                <span>คัดลอกสรุป</span>
+              </button>
+              <button onclick="switchTab('workouts')" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-xs font-semibold text-cyan-200 transition-all">
+                <span>ดูประวัติทั้งหมด</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+
+          <div id="latest-workout-coach-body">
+            <!-- Populated dynamically (or clean empty state) -->
+          </div>
+        </div>
+
+        <!-- 4. THREE RESPONSIVE DARK-MODE LINE CHARTS (CONTROLLED BY TIMEFRAME) -->
+        <div class="space-y-5">
+          <!-- Period Summary Strip -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="glass-card rounded-2xl p-3.5">
+              <p class="text-[11px] text-slate-400">เฉลี่ยพลังงานช่วงนี้</p>
+              <p id="sum-energy" class="font-num text-xl font-extrabold text-emerald-400 mt-0.5">--</p>
+            </div>
+            <div class="glass-card rounded-2xl p-3.5">
+              <p class="text-[11px] text-slate-400">จำนวน Workout ในช่วงนี้</p>
+              <p id="sum-workouts" class="font-num text-xl font-extrabold text-white mt-0.5">0 ครั้ง</p>
+            </div>
+            <div class="glass-card rounded-2xl p-3.5">
+              <p class="text-[11px] text-slate-400">TRIMP รวมในช่วงนี้</p>
+              <p id="sum-trimp" class="font-num text-xl font-extrabold text-rose-400 mt-0.5">0</p>
+            </div>
+            <div class="glass-card rounded-2xl p-3.5">
+              <p class="text-[11px] text-slate-400">ระยะทางรวมในช่วงนี้</p>
+              <p id="sum-dist" class="font-num text-xl font-extrabold text-cyan-400 mt-0.5">0 กม.</p>
+            </div>
+          </div>
+
+          <!-- Chart 1: Body Energy % & Resting HR / HRV -->
+          <div class="glass-card rounded-3xl p-5 sm:p-6">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div>
+                <h3 class="font-display text-sm sm:text-base font-bold text-white">1. พลังงานร่างกาย &amp; หัวใจพัก (Body Energy % • RHR • HRV)</h3>
+                <p id="c1-sub" class="text-xs text-slate-400">กราฟเส้นเปรียบเทียบระดับพลังงาน (แกนซ้าย %) กับ RHR / HRV (แกนขวา)</p>
+              </div>
+              <div class="flex items-center gap-3 text-[11px]">
+                <span class="flex items-center gap-1.5 text-emerald-400"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>Energy %</span>
+                <span class="flex items-center gap-1.5 text-cyan-400"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>HRV (ms)</span>
+                <span class="flex items-center gap-1.5 text-rose-400"><span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>RHR (bpm)</span>
+              </div>
+            </div>
+            <div id="chart1-empty" class="hidden py-12 text-center text-xs text-slate-400">
+              ยังไม่มีข้อมูลสุขภาพประจำวันในช่วงเวลานี้ — กด "บันทึกสุขภาพวันนี้" เพื่อเริ่มสร้างกราฟเส้น
+            </div>
+            <div id="chart1-wrap" class="relative h-64 sm:h-72 w-full">
+              <canvas id="chart-energy-vitals"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 2 & Chart 3 -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <!-- Chart 2: PMC (CTL, ATL, TSB) Multi-Line -->
+            <div class="glass-card rounded-3xl p-5 sm:p-6">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <div>
+                  <h3 class="font-display text-sm sm:text-base font-bold text-white">2. ความฟิต vs ความล้า (PMC: CTL • ATL • TSB)</h3>
+                  <p class="text-xs text-slate-400">CTL (42d) • ATL (7d) • TSB (Form = CTL − ATL)</p>
+                </div>
+                <div class="flex items-center gap-2.5 text-[10px]">
+                  <span class="text-cyan-400 font-semibold">● CTL</span>
+                  <span class="text-amber-400 font-semibold">● ATL</span>
+                  <span class="text-emerald-400 font-semibold">● TSB</span>
+                </div>
+              </div>
+              <div id="chart2-empty" class="hidden py-12 text-center text-xs text-slate-400">
+                ยังไม่มีประวัติการซ้อมในช่วงเวลานี้ — นำเข้าไฟล์ .GPX หรือเพิ่ม Workout เพื่อคำนวณ PMC
+              </div>
+              <div id="chart2-wrap" class="relative h-64 sm:h-72 w-full">
+                <canvas id="chart-pmc"></canvas>
+              </div>
+            </div>
+
+            <!-- Chart 3: ACWR + Efficiency Factor & W/kg -->
+            <div class="glass-card rounded-3xl p-5 sm:p-6">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <div>
+                  <h3 class="font-display text-sm sm:text-base font-bold text-white">3. ความเสี่ยงบาดเจ็บ &amp; ประสิทธิภาพ (ACWR • EF • W/kg)</h3>
+                  <p class="text-xs text-slate-400">พื้นที่สีเขียว = ACWR ปลอดภัย (0.8–1.3) • เส้นฟ้า EF • เส้นเขียว W/kg</p>
+                </div>
+              </div>
+              <div id="chart3-empty" class="hidden py-12 text-center text-xs text-slate-400">
+                ยังไม่มีข้อมูล ACWR / ประสิทธิภาพในช่วงเวลานี้
+              </div>
+              <div id="chart3-wrap" class="relative h-64 sm:h-72 w-full">
+                <canvas id="chart-acwr-ef"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========================================================= -->
+      <!-- TAB 2: บันทึก & วิเคราะห์ WORKOUT (LOG + GPX + FORMS)     -->
+      <!-- ========================================================= -->
+      <section id="view-workouts" class="tab-pane hidden space-y-6">
+
+        <!-- GPX Importer + Quick Forms Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <!-- Drag & Drop .GPX Importer -->
+          <div class="lg:col-span-8 glass-card rounded-3xl p-5 sm:p-6">
+            <div class="mb-3">
+              <h2 class="font-display text-base font-bold text-white flex items-center gap-2">
+                <i data-lucide="file-up" class="w-5 h-5 text-cyan-400"></i>
+                <span>นำเข้าไฟล์ .GPX จาก Zepp / Amazfit</span>
+              </h2>
+              <p class="text-xs text-slate-400">คำนวณระยะทาง Haversine, เวลา, Pace, Avg/Max HR, ความชัน และ Banister TRIMP แยกเพศ พร้อมเปิดบทวิเคราะห์โค้ชทันทีหลังบันทึก</p>
+            </div>
+
+            <label id="gpx-dropzone" for="gpx-file-input" class="mt-2 flex flex-col items-center justify-center border-2 border-dashed border-slate-700 hover:border-cyan-400/70 bg-slate-950/60 rounded-2xl p-6 cursor-pointer transition-all text-center">
+              <i data-lucide="upload-cloud" class="w-8 h-8 text-cyan-400 mb-2"></i>
+              <p class="text-sm font-semibold text-white">ลากไฟล์ .GPX มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์</p>
+              <p class="text-[11px] text-slate-400 mt-1">รองรับไฟล์ GPX จาก Amazfit T-Rex 3 / แอป Zepp</p>
+              <input id="gpx-file-input" type="file" accept=".gpx,application/gpx+xml,text/xml" class="hidden" onchange="handleGpxFileSelect(event)" />
+            </label>
+
+            <!-- Parsed GPX Confirmation Box -->
+            <div id="gpx-preview-box" class="hidden mt-4 rounded-2xl bg-slate-950/90 border border-cyan-500/40 p-4 space-y-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span class="text-[10px] font-semibold uppercase tracking-wider text-cyan-400">อ่านไฟล์ GPX สำเร็จ</span>
+                  <h4 id="gpx-prev-title" class="text-sm font-bold text-white"></h4>
+                </div>
+                <span id="gpx-prev-date" class="font-num text-xs text-slate-400"></span>
+              </div>
+
+              <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-xs">
+                <div class="bg-slate-900 rounded-xl p-2"><p class="text-[10px] text-slate-400">ระยะทาง</p><p id="gpx-prev-dist" class="font-num font-bold text-white">--</p></div>
+                <div class="bg-slate-900 rounded-xl p-2"><p class="text-[10px] text-slate-400">เวลา</p><p id="gpx-prev-dur" class="font-num font-bold text-white">--</p></div>
+                <div class="bg-slate-900 rounded-xl p-2"><p class="text-[10px] text-slate-400">Avg / Max HR</p><p id="gpx-prev-hr" class="font-num font-bold text-rose-300">--</p></div>
+                <div class="bg-slate-900 rounded-xl p-2"><p class="text-[10px] text-slate-400">ความชัน</p><p id="gpx-prev-ele" class="font-num font-bold text-emerald-300">--</p></div>
+                <div class="bg-slate-900 rounded-xl p-2 col-span-2 sm:col-span-1"><p class="text-[10px] text-slate-400">TRIMP</p><p id="gpx-prev-trimp" class="font-num font-bold text-amber-300">--</p></div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div>
+                  <label class="block text-[10px] text-slate-400 mb-1">ประเภทกีฬา</label>
+                  <select id="gpx-sport-type" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white outline-none">
+                    <option value="running">🏃 วิ่ง (Running)</option>
+                    <option value="badminton">🏸 แบดมินตัน</option>
+                    <option value="football">⚽ ฟุตบอล</option>
+                    <option value="cycling">🚴 ปั่นจักรยาน</option>
+                    <option value="other">🤸 อื่นๆ</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[10px] text-slate-400 mb-1">Avg Power (W) (ถ้ามีจาก Zepp)</label>
+                  <input id="gpx-power-in" type="number" min="0" max="600" placeholder="เช่น 210" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs font-num text-white outline-none" />
+                </div>
+                <div>
+                  <label class="block text-[10px] text-slate-400 mb-1">RPE (1–10)</label>
+                  <input id="gpx-rpe-in" type="number" min="1" max="10" value="7" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs font-num text-white outline-none" />
+                </div>
+              </div>
+
+              <div class="flex gap-2 justify-end pt-1">
+                <button onclick="cancelGpxPreview()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300">ยกเลิก</button>
+                <button onclick="saveParsedGpxWorkout()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 text-xs font-bold shadow-lg shadow-emerald-500/20">บันทึก &amp; เปิดบทวิเคราะห์โค้ช</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Add Buttons -->
+          <div class="lg:col-span-4 glass-card rounded-3xl p-5 sm:p-6 flex flex-col justify-between">
+            <div>
+              <h3 class="font-display text-base font-bold text-white mb-1">บันทึกข้อมูลด้วยตนเอง</h3>
+              <p class="text-xs text-slate-400 leading-relaxed">
+                สำหรับกีฬาในร่ม (แบดมินตัน, ฟุตบอล, เวท) หรือบันทึกค่าสุขภาพตอนเช้า (การนอน, HRV, RHR, น้ำหนัก) เพื่ออัปเดตพลังงานร่างกายทันที
+              </p>
+            </div>
+            <div class="space-y-2.5 mt-5">
+              <button onclick="openWorkoutModal()" class="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all active:scale-95">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span>+ เพิ่มบันทึก Workout ใหม่</span>
+              </button>
+              <button onclick="openDailyMetricModal()" class="w-full py-2.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-emerald-300 font-semibold text-xs flex items-center justify-center gap-2 transition-all">
+                <i data-lucide="heart-pulse" class="w-4 h-4"></i>
+                <span>+ บันทึกสุขภาพประจำวัน</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Searchable & Clickable Workout History List -->
+        <div class="space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 class="font-display text-base font-bold text-white">ประวัติ Workout (คลิกแต่ละรายการเพื่ออ่านบทวิเคราะห์โค้ช)</h3>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <div class="relative flex-1 sm:w-52">
+                <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                <input id="workout-search" type="text" oninput="renderWorkoutsTab()" placeholder="ค้นหาชื่อกิจกรรม..." class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white outline-none focus:border-cyan-500" />
+              </div>
+              <div class="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                <button onclick="setWorkoutFilter('all')" data-filter="all" class="filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0">ทั้งหมด</button>
+                <button onclick="setWorkoutFilter('running')" data-filter="running" class="filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0">🏃 วิ่ง</button>
+                <button onclick="setWorkoutFilter('badminton')" data-filter="badminton" class="filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0">🏸 แบด</button>
+                <button onclick="setWorkoutFilter('football')" data-filter="football" class="filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0">⚽ บอล</button>
+                <button onclick="setWorkoutFilter('other')" data-filter="other" class="filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0">🤸 อื่นๆ</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="workout-list" class="space-y-3"></div>
+        </div>
+      </section>
+
+    </div> <!-- End #athlete-content-wrapper -->
+
+    <!-- ========================================================= -->
+    <!-- TAB 3: สมาชิก & ตั้งค่าระบบ (FAMILY, SUPABASE & AUTO-SYNC) -->
+    <!-- ========================================================= -->
+    <section id="view-settings" class="tab-pane hidden space-y-6">
+
+      <!-- Family Management -->
+      <div class="space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="font-display text-lg font-bold text-white">จัดการสมาชิกในครอบครัว (2–10 คน)</h2>
+            <p class="text-xs text-slate-400">โครงร่าง Body Battery (ชาย/หญิง/เด็ก) และสมการ TRIMP/Max HR ตรวจจับอัตโนมัติจากข้อมูลโปรไฟล์</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="settings-member-count" class="font-num text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-emerald-400">0 / 10 คน</span>
+            <button onclick="openAthleteModal()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 active:scale-95">
+              <i data-lucide="user-plus" class="w-4 h-4"></i>
+              <span>+ เพิ่มสมาชิกใหม่</span>
+            </button>
+          </div>
+        </div>
+        <div id="family-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div>
+
+      <!-- Supabase & Auto-Sync Integration Scripts -->
+      <div class="pt-6 border-t border-slate-800/80 space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="font-display text-lg font-bold text-white">เชื่อมต่อ Supabase &amp; สคริปต์ Auto-Sync (Zepp iCloud + Apple Health)</h2>
+            <p class="text-xs text-slate-400">พร้อมวางขึ้น Vercel และเชื่อมฐานข้อมูลจริงทันที</p>
+          </div>
+          <button onclick="openSupabaseModal()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-cyan-300">
+            <i data-lucide="database" class="w-4 h-4"></i>
+            <span>ตั้งค่าเชื่อมต่อ Supabase</span>
+          </button>
+        </div>
+
+        <!-- 1. SQL Schema -->
+        <div class="glass-card rounded-3xl p-5">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div>
+              <h3 class="font-display text-sm font-bold text-white">1. Supabase SQL Schema (ตาราง athletes, daily_metrics, workouts)</h3>
+              <p class="text-[11px] text-slate-400">คัดลอกไปรันใน Supabase → SQL Editor เพื่อสร้างตาราง</p>
+            </div>
+            <button onclick="copyBlockText('code-sql', 'คัดลอก SQL Schema แล้ว')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-semibold text-emerald-300">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i><span>คัดลอก SQL</span>
+            </button>
+          </div>
+          <pre id="code-sql" class="bg-slate-950 border border-slate-800 rounded-2xl p-4 font-num text-[11px] text-slate-300 overflow-x-auto max-h-56 leading-relaxed">CREATE TABLE IF NOT EXISTS athletes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  sex TEXT NOT NULL CHECK (sex IN ('male', 'female')),
+  birth_date DATE NOT NULL,
+  weight_kg NUMERIC NOT NULL,
+  height_cm NUMERIC NOT NULL,
+  max_hr INT NOT NULL,
+  resting_hr INT NOT NULL,
+  hrv_baseline INT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS daily_metrics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  athlete_id UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
+  metric_date DATE NOT NULL,
+  sleep_hours NUMERIC,
+  hrv INT,
+  resting_hr INT,
+  weight_kg NUMERIC,
+  steps INT,
+  ai_daily_brief JSONB, -- แคชบทวิเคราะห์ประจำวัน ลดการยิง API ซ้ำ
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(athlete_id, metric_date)
+);
+
+CREATE TABLE IF NOT EXISTS workouts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  athlete_id UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
+  external_id TEXT UNIQUE,
+  workout_date DATE NOT NULL,
+  sport_type TEXT NOT NULL,
+  title TEXT,
+  duration_min NUMERIC NOT NULL,
+  distance_km NUMERIC DEFAULT 0,
+  avg_hr INT NOT NULL,
+  max_hr INT DEFAULT 0,
+  avg_power INT DEFAULT 0,
+  cadence INT DEFAULT 0,
+  elevation_gain NUMERIC DEFAULT 0,
+  rpe INT DEFAULT 5,
+  trimp NUMERIC DEFAULT 0,
+  source TEXT DEFAULT 'manual',
+  ai_coach_report JSONB, -- แคชบทวิเคราะห์หลัง Workout
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE athletes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_metrics DISABLE ROW LEVEL SECURITY;
+ALTER TABLE workouts DISABLE ROW LEVEL SECURITY;</pre>
+        </div>
+
+        <!-- 2. Python Zepp iCloud FIT Sync -->
+        <div class="glass-card rounded-3xl p-5">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div>
+              <h3 class="font-display text-sm font-bold text-white">2. สคริปต์ Python Auto-Sync จาก Zepp iCloud Backup (<code class="font-num text-cyan-300">scripts/zepp_icloud_sync.py</code>)</h3>
+              <p class="text-[11px] text-slate-400">ดึงไฟล์ .fit จากโฟลเดอร์ iCloud คำนวณ Banister TRIMP แยกเพศ และ Upsert ขึ้น Supabase อัตโนมัติ</p>
+            </div>
+            <button onclick="copyBlockText('code-python', 'คัดลอก Python Script แล้ว')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-xs font-semibold text-cyan-300">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i><span>คัดลอก Python</span>
+            </button>
+          </div>
+          <pre id="code-python" class="bg-slate-950 border border-slate-800 rounded-2xl p-4 font-num text-[11px] text-slate-300 overflow-x-auto max-h-56 leading-relaxed"># pip install fitparse supabase
+import os, time, math
+from pathlib import Path
+from fitparse import FitFile
+from supabase import create_client
+
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://YOUR_PROJECT.supabase.co")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "YOUR_KEY")
+ATHLETE_SLUG = os.getenv("ATHLETE_SLUG", "pluk")
+ICLOUD_FIT_DIR = Path.home() / "Library/Mobile Documents/com~apple~CloudDocs/Zepp/FITs"
+sb = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+def calc_trimp(dur, avg_hr, sex, rhr, max_hr):
+    hrr = max(0.0, min(1.0, (avg_hr - rhr) / max(20, max_hr - rhr)))
+    k1, k2 = (0.86, 1.67) if sex == "female" else (0.64, 1.92)
+    return round(dur * hrr * k1 * math.exp(k2 * hrr), 1)
+
+def sync_once():
+    ath = sb.table("athletes").select("*").eq("slug", ATHLETE_SLUG).single().execute().data
+    if not ICLOUD_FIT_DIR.exists(): return
+    for f in sorted(ICLOUD_FIT_DIR.glob("*.fit")):
+        ext_id = f"fit_{ath['slug']}_{f.stem}"
+        if sb.table("workouts").select("id").eq("external_id", ext_id).execute().data: continue
+        fit = FitFile(str(f))
+        s = next(fit.get_messages("session"), None)
+        if not s: continue
+        v = {x.name: x.value for x in s}
+        dur = round((v.get("total_timer_time") or 0) / 60.0, 2)
+        avg_hr = int(v.get("avg_heart_rate") or 0)
+        raw_sport = str(v.get("sport") or "running").lower()
+        sport = "running" if "run" in raw_sport else ("badminton" if "badminton" in raw_sport else ("football" if "soccer" in raw_sport or "football" in raw_sport else ("cycling" if "cycl" in raw_sport else "other")))
+        sb.table("workouts").upsert({
+            "athlete_id": ath["id"],
+            "external_id": ext_id,
+            "workout_date": v["start_time"].strftime("%Y-%m-%d") if v.get("start_time") else time.strftime("%Y-%m-%d"),
+            "sport_type": sport,
+            "title": f"Zepp {raw_sport.title()} ({f.stem})",
+            "duration_min": dur,
+            "distance_km": round((v.get("total_distance") or 0) / 1000.0, 2),
+            "avg_hr": avg_hr,
+            "max_hr": int(v.get("max_heart_rate") or 0),
+            "avg_power": int(v.get("avg_power") or 0),
+            "cadence": int((v.get("avg_running_cadence") or 0) * 2),
+            "elevation_gain": round(v.get("total_ascent") or 0, 1),
+            "trimp": calc_trimp(dur, avg_hr, ath["sex"], ath["resting_hr"], ath["max_hr"]),
+            "source": "zepp_icloud_fit"
+        }, on_conflict="external_id").execute()
+
+if __name__ == "__main__":
+    while True:
+        try: sync_once()
+        except Exception as e: print("Sync Error:", e)
+        time.sleep(300)</pre>
+        </div>
+
+        <!-- 3. Apple Health JSON Webhook Spec -->
+        <div class="glass-card rounded-3xl p-5">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div>
+              <h3 class="font-display text-sm font-bold text-white">3. Apple Health → Health Auto Export / Shortcuts Webhook (<code class="font-num text-emerald-300">/api/ingest-health</code>)</h3>
+              <p class="text-[11px] text-slate-400">ส่งค่า Sleep, HRV, Resting HR, Weight, Steps จาก iPhone เข้า Vercel API → Supabase อัตโนมัติทุกเช้า</p>
+            </div>
+            <button onclick="copyBlockText('code-webhook', 'คัดลอก JSON Spec แล้ว')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-xs font-semibold text-indigo-300">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i><span>คัดลอก Spec</span>
+            </button>
+          </div>
+          <pre id="code-webhook" class="bg-slate-950 border border-slate-800 rounded-2xl p-4 font-num text-[11px] text-slate-300 overflow-x-auto leading-relaxed">POST https://YOUR-VERCEL-DOMAIN.vercel.app/api/ingest-health?u=pluk
+Headers:
+  Content-Type: application/json
+  x-webhook-secret: YOUR_WEBHOOK_SECRET
+
+Body (หรือส่ง JSON จากแอป Health Auto Export ได้โดยตรง):
+{
+  "metric_date": "2026-11-27",
+  "sleep_hours": 7.6,
+  "hrv": 64,
+  "resting_hr": 52,
+  "weight_kg": 57.0,
+  "steps": 8500
+}</pre>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Mobile Bottom 3-Tab Bar -->
+  <nav class="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-slate-800/90 bg-[#070b14]/95 backdrop-blur-xl px-2 py-2">
+    <div class="grid grid-cols-3 gap-1 max-w-md mx-auto">
+      <button onclick="switchTab('dashboard')" data-tab="dashboard" class="mob-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[11px] font-medium">
+        <i data-lucide="layout-dashboard" class="w-5 h-5 mb-0.5"></i>
+        <span>แดชบอร์ด</span>
+      </button>
+      <button onclick="switchTab('workouts')" data-tab="workouts" class="mob-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[11px] font-medium">
+        <i data-lucide="clipboard-list" class="w-5 h-5 mb-0.5"></i>
+        <span>Workout / GPX</span>
+      </button>
+      <button onclick="switchTab('settings')" data-tab="settings" class="mob-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[11px] font-medium">
+        <i data-lucide="settings-2" class="w-5 h-5 mb-0.5"></i>
+        <span>สมาชิก/ตั้งค่า</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ========================================================= -->
+  <!-- MODAL: POST-WORKOUT COACH REPORT                          -->
+  <!-- ========================================================= -->
+  <div id="modal-coach-report" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="glass-card rounded-3xl w-full max-w-2xl p-6 border border-cyan-500/40 my-auto">
+      <div class="flex items-start justify-between gap-3 mb-4 pb-3 border-b border-slate-800">
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-[10px] font-num uppercase tracking-wider text-cyan-400">Post-Workout Coach Report</span>
+            <span id="cr-provider" class="px-2 py-0.5 rounded-full text-[10px] font-num font-semibold bg-slate-900 border border-slate-700 text-slate-400">Rule-Based</span>
+          </div>
+          <h3 id="cr-title" class="font-display text-base sm:text-lg font-bold text-white mt-0.5">--</h3>
+          <p id="cr-meta" class="text-xs text-slate-400 mt-0.5">--</p>
+        </div>
+        <button onclick="closeModal('modal-coach-report')" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white shrink-0"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <div id="cr-body" class="space-y-3">
+        <!-- Populated with 4 structured coaching blocks -->
+      </div>
+
+      <div class="mt-5 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="cr-ai-refresh-btn" onclick="refreshModalWorkoutAiCoach()" class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-xs font-bold text-emerald-300 transition-all active:scale-95">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+            <span>วิเคราะห์ AI ใหม่</span>
+          </button>
+          <button id="cr-copy-btn" onclick="copyModalCoachReport()" class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-xs font-bold text-cyan-300 transition-all active:scale-95">
+            <i data-lucide="copy" class="w-4 h-4"></i>
+            <span>คัดลอกบทวิเคราะห์นี้</span>
+          </button>
+        </div>
+        <button onclick="closeModal('modal-coach-report')" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL: ADD / EDIT FAMILY MEMBER                           -->
+  <!-- ========================================================= -->
+  <div id="modal-athlete" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="glass-card rounded-3xl w-full max-w-lg p-6 border border-slate-700 my-auto">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 id="modal-athlete-title" class="font-display text-base font-bold text-white">+ เพิ่มสมาชิกใหม่</h3>
+          <p class="text-xs text-slate-400">โครงร่าง Body Battery และสูตรคำนวณจะปรับตามเพศและวันเกิดอัตโนมัติ</p>
+        </div>
+        <button onclick="closeModal('modal-athlete')" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <form id="form-athlete" onsubmit="handleSaveAthlete(event)" class="space-y-4">
+        <input type="hidden" id="a-id" />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">ชื่อสมาชิก</label>
+            <input id="a-name" type="text" required placeholder="เช่น พี่ชาย, แฟน, น้อง..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">URL Slug (ภาษาอังกฤษตัวเล็ก)</label>
+            <div class="flex items-center bg-slate-950 border border-slate-700 rounded-xl px-3 focus-within:border-emerald-500">
+              <span class="font-num text-xs text-slate-500 mr-1">?u=</span>
+              <input id="a-slug" type="text" required pattern="[a-z0-9_-]+" placeholder="pluk" class="w-full bg-transparent py-2.5 text-sm font-num text-cyan-300 outline-none" />
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">เพศ (Sex)</label>
+            <select id="a-sex" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-500">
+              <option value="male">ชาย (Male)</option>
+              <option value="female">หญิง (Female)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">วันเกิด</label>
+            <input id="a-birth" type="date" required value="1988-01-01" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2.5 text-xs font-num text-white outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">น้ำหนัก (กก.)</label>
+            <input id="a-weight" type="number" step="0.1" min="10" max="220" required value="60" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-num text-white outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">ส่วนสูง (ซม.)</label>
+            <input id="a-height" type="number" step="0.5" min="70" max="230" required value="170" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-num text-white outline-none focus:border-emerald-500" />
+          </div>
+        </div>
+
+        <div class="bg-slate-950/75 border border-slate-800 rounded-2xl p-3.5 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-semibold text-slate-300">ค่าฐานชีพจรและ HRV</span>
+            <button type="button" onclick="autoCalculateMaxHR()" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-[11px] font-semibold text-cyan-300">
+              <i data-lucide="calculator" class="w-3 h-3"></i>
+              <span>คำนวณ Max HR อัตโนมัติ</span>
+            </button>
+          </div>
+          <div class="grid grid-cols-3 gap-3">
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">Max HR</label>
+              <input id="a-maxhr" type="number" min="130" max="220" required value="181" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-num text-white outline-none" />
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">Resting HR</label>
+              <input id="a-rhr" type="number" min="35" max="115" required value="55" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-num text-white outline-none" />
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">HRV ฐาน (ms)</label>
+              <input id="a-hrv" type="number" min="15" max="160" required value="60" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-num text-white outline-none" />
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-2.5 pt-1">
+          <button type="button" onclick="closeModal('modal-athlete')" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300">ยกเลิก</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 text-xs font-bold shadow-lg shadow-emerald-500/20">บันทึกโปรไฟล์</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL: DAILY HEALTH METRICS                               -->
+  <!-- ========================================================= -->
+  <div id="modal-daily" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="glass-card rounded-3xl w-full max-w-md p-6 border border-slate-700 my-auto">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="font-display text-base font-bold text-white">บันทึกค่าสุขภาพประจำวัน</h3>
+          <p id="modal-daily-user" class="text-xs text-emerald-400"></p>
+        </div>
+        <button onclick="closeModal('modal-daily')" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <form id="form-daily" onsubmit="handleSaveDailyMetric(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">วันที่</label>
+          <input id="dm-date" type="date" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-num text-white outline-none focus:border-emerald-500" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">การนอน (ชั่วโมง)</label>
+            <input id="dm-sleep" type="number" step="0.1" min="1" max="16" required placeholder="เช่น 7.5" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-num text-white outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">HRV ตอนตื่น (ms)</label>
+            <input id="dm-hrv" type="number" min="10" max="200" required placeholder="เช่น 64" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-num text-white outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Resting HR (bpm)</label>
+            <input id="dm-rhr" type="number" min="35" max="120" required placeholder="เช่น 52" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-num text-white outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">น้ำหนักตัว (กก.)</label>
+            <input id="dm-weight" type="number" step="0.1" min="10" max="220" placeholder="อัปเดตล่าสุด" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-num text-white outline-none focus:border-emerald-500" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">จำนวนก้าวเดิน (Steps) — ไม่บังคับ</label>
+          <input id="dm-steps" type="number" min="0" max="100000" placeholder="เช่น 8500" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-num text-white outline-none focus:border-emerald-500" />
+        </div>
+        <div class="flex gap-2.5 pt-1">
+          <button type="button" onclick="closeModal('modal-daily')" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300">ยกเลิก</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 text-xs font-bold shadow-lg shadow-emerald-500/20">บันทึกข้อมูลสุขภาพ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL: ADD WORKOUT                                        -->
+  <!-- ========================================================= -->
+  <div id="modal-workout" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="glass-card rounded-3xl w-full max-w-lg p-6 border border-slate-700 my-auto">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="font-display text-base font-bold text-white">+ เพิ่มบันทึก Workout</h3>
+          <p id="modal-workout-user" class="text-xs text-emerald-400"></p>
+        </div>
+        <button onclick="closeModal('modal-workout')" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <form id="form-workout" onsubmit="handleSaveWorkout(event)" class="space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">ประเภทกีฬา</label>
+            <select id="w-sport" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-500">
+              <option value="running">🏃 วิ่ง (Running)</option>
+              <option value="badminton">🏸 แบดมินตัน (Badminton)</option>
+              <option value="football">⚽ ฟุตบอล (Football)</option>
+              <option value="cycling">🚴 ปั่นจักรยาน (Cycling)</option>
+              <option value="other">🤸 อื่นๆ / เวท</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">วันที่</label>
+            <input id="w-date" type="date" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-num text-white outline-none focus:border-emerald-500" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">ชื่อกิจกรรม / เป้าหมายซ้อม</label>
+          <input id="w-title" type="text" required placeholder="เช่น Easy Run โซน 2 หรือ แบดมินตันเย็น 2 ชม." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-500" />
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">เวลา (นาที)</label>
+            <input id="w-dur" type="number" step="0.5" min="1" max="600" required placeholder="45" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm font-num text-white outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">ระยะทาง (กม.)</label>
+            <input id="w-dist" type="number" step="0.01" min="0" max="200" value="0" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm font-num text-white outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Avg HR (bpm)</label>
+            <input id="w-avghr" type="number" min="60" max="220" required placeholder="142" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm font-num text-white outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Max HR (bpm)</label>
+            <input id="w-maxhr" type="number" min="0" max="225" value="0" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm font-num text-white outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Avg Power (W)</label>
+            <input id="w-power" type="number" min="0" max="800" value="0" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm font-num text-white outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">RPE (1–10)</label>
+            <input id="w-rpe" type="number" min="1" max="10" value="6" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm font-num text-white outline-none focus:border-emerald-500" />
+          </div>
+        </div>
+
+        <div class="flex gap-2.5 pt-1">
+          <button type="button" onclick="closeModal('modal-workout')" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300">ยกเลิก</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 text-xs font-bold shadow-lg shadow-emerald-500/20">บันทึก &amp; วิเคราะห์</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL: SUPABASE CONNECTION                                -->
+  <!-- ========================================================= -->
+  <div id="modal-supabase" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="glass-card rounded-3xl w-full max-w-lg p-6 border border-slate-700 my-auto">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="font-display text-base font-bold text-white flex items-center gap-2">
+            <i data-lucide="database" class="w-5 h-5 text-emerald-400"></i>
+            <span>เชื่อมต่อ Supabase (Production)</span>
+          </h3>
+          <p class="text-xs text-slate-400">กรอก Project URL &amp; Anon Key หรือใส่ไว้ในตัวแปร SUPABASE_CONFIG ในไฟล์</p>
+        </div>
+        <button onclick="closeModal('modal-supabase')" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Supabase Project URL</label>
+          <input id="sb-in-url" type="url" placeholder="https://xxxxxxxxxxxx.supabase.co" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-num text-white outline-none focus:border-emerald-500" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Supabase Anon Public Key</label>
+          <input id="sb-in-key" type="password" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-num text-white outline-none focus:border-emerald-500" />
+        </div>
+        <div id="sb-msg" class="hidden rounded-xl p-3 text-xs border"></div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="connectSupabase()" class="flex-1 py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-all">เชื่อมต่อ &amp; โหลดข้อมูล</button>
+          <button onclick="disconnectSupabase()" class="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs">ตัดการเชื่อมต่อ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL: CUSTOM CONFIRM DIALOG                              -->
+  <!-- ========================================================= -->
+  <div id="modal-confirm" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="glass-card rounded-3xl w-full max-w-sm p-6 border border-slate-700 text-center">
+      <div class="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 mx-auto mb-3">
+        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+      </div>
+      <h3 id="confirm-title" class="font-display text-base font-bold text-white mb-1">ยืนยันการลบ</h3>
+      <p id="confirm-desc" class="text-xs text-slate-400 mb-5"></p>
+      <div class="flex gap-2.5">
+        <button onclick="closeModal('modal-confirm')" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300">ยกเลิก</button>
+        <button id="confirm-ok-btn" class="flex-1 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-white text-xs font-bold">ยืนยันลบ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed top-5 right-5 z-[60] hidden items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-500 text-slate-950 font-bold text-xs shadow-2xl">
+    <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+    <span id="toast-text"></span>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- PRODUCTION APPLICATION & COACHING ENGINE                  -->
+  <!-- ========================================================= -->
+  <script>
+    // =========================================================================
+    // 1. SUPABASE CONFIG (Insert keys here for Vercel deploy or use UI modal)
+    // =========================================================================
+    const SUPABASE_CONFIG = {
+      url: '',
+      anonKey: ''
+    };
+
+    const LS = {
+      SB_URL: 'athlete_os_prod_sb_url',
+      SB_KEY: 'athlete_os_prod_sb_key',
+      ATHLETES: 'athlete_os_prod_local_athletes',
+      METRICS: 'athlete_os_prod_local_metrics',
+      WORKOUTS: 'athlete_os_prod_local_workouts'
+    };
+
+    const SILHOUETTES = {
+      male: {
+        path: "M 110 34 C 122 34, 130 43, 130 56 C 130 67, 123 76, 118 79 L 118 89 C 135 92, 152 98, 159 112 L 176 196 C 178 205, 173 211, 167 211 C 161 211, 158 206, 156 197 L 144 134 L 140 198 L 144 242 L 149 384 C 149 394, 144 400, 136 400 C 128 400, 124 394, 123 384 L 115 266 L 110 258 L 105 266 L 97 384 C 96 394, 92 400, 84 400 C 76 400, 71 394, 71 384 L 76 242 L 80 198 L 76 134 L 64 197 C 62 206, 59 211, 53 211 C 47 211, 42 205, 44 196 L 61 112 C 68 98, 85 92, 102 89 L 102 79 C 97 76, 90 67, 90 56 C 90 43, 98 34, 110 34 Z",
+        topY: 34, bottomY: 400, heart: { x: 118, y: 134 }, spine: { y1: 94, y2: 220 }
+      },
+      female: {
+        path: "M 110 42 C 121 42, 128 50, 128 62 C 128 72, 122 81, 117 84 L 117 93 C 130 96, 143 102, 149 114 L 165 194 C 167 202, 162 208, 157 208 C 152 208, 149 203, 147 195 L 136 136 L 130 184 C 138 199, 144 216, 143 238 L 142 384 C 142 394, 137 400, 130 400 C 123 400, 119 394, 119 384 L 113 266 L 110 258 L 107 266 L 101 384 C 101 394, 97 400, 90 400 C 83 400, 78 394, 78 384 L 77 238 C 76 216, 82 199, 90 184 L 84 136 L 73 195 C 71 203, 68 208, 63 208 C 58 208, 53 202, 55 194 L 71 114 C 77 102, 90 96, 103 93 L 103 84 C 98 81, 92 72, 92 62 C 92 50, 99 42, 110 42 Z",
+        topY: 42, bottomY: 400, heart: { x: 117, y: 138 }, spine: { y1: 98, y2: 215 }
+      },
+      child: {
+        path: "M 110 108 C 124 108, 133 118, 133 132 C 133 144, 125 154, 118 157 L 118 164 C 131 167, 142 173, 147 185 L 160 245 C 162 252, 157 257, 152 257 C 147 257, 144 253, 142 246 L 134 202 L 133 260 L 137 386 C 137 395, 132 400, 125 400 C 118 400, 115 395, 114 386 L 112 292 L 110 286 L 108 292 L 106 386 C 105 395, 102 400, 95 400 C 88 400, 83 395, 83 386 L 87 260 L 86 202 L 78 246 C 76 253, 73 257, 68 257 C 63 257, 58 252, 60 245 L 73 185 C 78 173, 89 167, 102 164 L 102 157 C 95 154, 87 144, 87 132 C 87 118, 96 108, 110 108 Z",
+        topY: 108, bottomY: 400, heart: { x: 116, y: 198 }, spine: { y1: 168, y2: 262 }
+      }
+    };
+
+    const THAI_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const TF_LABELS = {
+      '1D': 'ย้อนหลัง 1 วัน',
+      '1W': 'ย้อนหลัง 1 สัปดาห์ (7 วัน)',
+      '1M': 'ย้อนหลัง 1 เดือน (30 วัน)',
+      '1Y': 'ย้อนหลัง 1 ปี (รายสัปดาห์)',
+      '2Y': 'ย้อนหลัง 2 ปี (รายเดือน)',
+      '3Y': 'ย้อนหลัง 3 ปี (รายเดือน)',
+      'ALL': 'ตั้งแต่เริ่มบันทึกข้อมูลทั้งหมด'
+    };
+
+    // State (Zero Mock Data)
+    let sb = null;
+    let isSupabaseLive = false;
+    let athletes = [];
+    let metricsByAthlete = {};
+    let workoutsByAthlete = {};
+    let activeAthleteId = null;
+
+    let currentTab = 'dashboard';
+    let currentTimeframe = '1W'; // DEFAULT: 1 สัปดาห์
+    let currentFilter = 'all';
+    let parsedGpxDraft = null;
+    let pendingConfirmFn = null;
+    let latestReportPlainText = '';
+    let modalReportPlainText = '';
+    let activeModalWorkoutId = null;
+
+    // AI Coach cancellation & session-level attempt tracking
+    let dailyAiAbortController = null;
+    let latestWoAiAbortController = null;
+    let modalWoAiAbortController = null;
+    const aiAttemptedDailyKeys = new Set();
+    const aiAttemptedWorkoutIds = new Set();
+
+    let chartEnergy = null, chartPmc = null, chartAcwrEf = null;
+
+    // =========================================================================
+    // 2. CORE SPORTS SCIENCE FORMULAS
+    // =========================================================================
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+    function getTodayISO() {
+      const now = new Date();
+      return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    }
+
+    function calcAge(birthStr) {
+      if (!birthStr) return 30;
+      const b = new Date(birthStr + 'T00:00:00');
+      const now = new Date();
+      let age = now.getFullYear() - b.getFullYear();
+      const m = now.getMonth() - b.getMonth();
+      if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+      return Math.max(1, age);
+    }
+
+    function formatThaiDate(iso) {
+      if (!iso) return '-';
+      const [y, m, d] = iso.split('-').map(Number);
+      return `${d} ${THAI_MONTHS[m - 1]} ${y + 543}`;
+    }
+
+    function formatThaiShort(iso) {
+      if (!iso) return '-';
+      const [, m, d] = iso.split('-').map(Number);
+      return `${d} ${THAI_MONTHS[m - 1]}`;
+    }
+
+    function formatThaiMonthYear(ym) {
+      const [y, m] = ym.split('-').map(Number);
+      return `${THAI_MONTHS[m - 1]} ${String(y + 543).slice(-2)}`;
+    }
+
+    function formatPace(durationMin, distanceKm) {
+      if (!distanceKm || distanceKm <= 0 || !durationMin || durationMin <= 0) return '-';
+      const paceMin = durationMin / distanceKm;
+      const m = Math.floor(paceMin);
+      const s = Math.round((paceMin - m) * 60);
+      return `${m}:${String(s === 60 ? 0 : s).padStart(2, '0')} /กม.`;
+    }
+
+    /**
+     * Sex & Age Differentiated Max HR
+     */
+    function formulaMaxHR(sex, age) {
+      if (age < 14) return 202;
+      return sex === 'female' ? Math.round(206 - 0.88 * age) : Math.round(208 - 0.7 * age);
+    }
+
+    /**
+     * Sex-Differentiated Banister TRIMP
+     */
+    function calcBanisterTRIMP(durationMin, avgHR, athlete) {
+      const rhr = Number(athlete.resting_hr) || 55;
+      const maxHR = Number(athlete.max_hr) || 185;
+      const hrr = clamp((avgHR - rhr) / Math.max(20, maxHR - rhr), 0, 1);
+      const isFem = athlete.sex === 'female';
+      const k1 = isFem ? 0.86 : 0.64;
+      const k2 = isFem ? 1.67 : 1.92;
+      return +(durationMin * hrr * k1 * Math.exp(k2 * hrr)).toFixed(1);
+    }
+
+    /**
+     * Karvonen 5 Heart Rate Zones
+     */
+    function calcKarvonenZones(athlete) {
+      const rhr = Number(athlete.resting_hr);
+      const maxHR = Number(athlete.max_hr);
+      const hrr = Math.max(20, maxHR - rhr);
+      return [
+        { num: 1, code: 'Z1', name: 'Recovery', lo: Math.round(rhr + 0.50 * hrr), hi: Math.round(rhr + 0.60 * hrr), cls: 'border-slate-700 text-slate-300' },
+        { num: 2, code: 'Z2', name: 'Aerobic ★', lo: Math.round(rhr + 0.60 * hrr), hi: Math.round(rhr + 0.70 * hrr), cls: 'border-emerald-500/40 text-emerald-300 bg-emerald-500/10' },
+        { num: 3, code: 'Z3', name: 'Tempo', lo: Math.round(rhr + 0.70 * hrr), hi: Math.round(rhr + 0.80 * hrr), cls: 'border-cyan-500/40 text-cyan-300' },
+        { num: 4, code: 'Z4', name: 'Anaerobic', lo: Math.round(rhr + 0.80 * hrr), hi: Math.round(rhr + 0.90 * hrr), cls: 'border-amber-500/40 text-amber-300' },
+        { num: 5, code: 'Z5', name: 'VO2 Max', lo: Math.round(rhr + 0.90 * hrr), hi: maxHR, cls: 'border-rose-500/40 text-rose-300' }
+      ];
+    }
+
+    function getHRZone(hr, athlete) {
+      const zones = calcKarvonenZones(athlete);
+      if (hr < zones[0].lo) return { num: 0, code: 'Z0', name: 'Light', lo: 0, hi: zones[0].lo - 1 };
+      for (const z of zones) {
+        if (hr <= z.hi) return z;
+      }
+      return zones[4];
+    }
+
+    /**
+     * Efficiency Factor: Speed (m/min) / Avg HR (or Power / Avg HR if no distance)
+     */
+    function calcEF(w) {
+      if (!w.avg_hr || Number(w.avg_hr) <= 0) return { val: 0, unit: '' };
+      if (Number(w.distance_km) > 0 && Number(w.duration_min) > 0) {
+        const mPerMin = (Number(w.distance_km) * 1000) / Number(w.duration_min);
+        return { val: +(mPerMin / Number(w.avg_hr)).toFixed(2), unit: 'm/min/bpm' };
+      }
+      if (Number(w.avg_power) > 0) {
+        return { val: +(Number(w.avg_power) / Number(w.avg_hr)).toFixed(2), unit: 'W/bpm' };
+      }
+      return { val: 0, unit: '' };
+    }
+
+    function calcWkg(avgPower, weightKg) {
+      if (!avgPower || Number(avgPower) <= 0 || !weightKg || Number(weightKg) <= 0) return 0;
+      return +(Number(avgPower) / Number(weightKg)).toFixed(2);
+    }
+
+    /**
+     * Compute 14-day rolling baseline from real daily_metrics (fallback to profile baseline)
+     */
+    function get14DayBaseline(metrics, athlete, refDateIso) {
+      const ref = new Date(refDateIso + 'T00:00:00');
+      const start = new Date(ref);
+      start.setDate(ref.getDate() - 14);
+      const startIso = start.toISOString().slice(0, 10);
+
+      const recent = (metrics || []).filter(m => m.metric_date >= startIso && m.metric_date <= refDateIso);
+      const hrvs = recent.map(m => Number(m.hrv)).filter(v => v > 0);
+      const rhrs = recent.map(m => Number(m.resting_hr)).filter(v => v > 0);
+
+      return {
+        hrvBase: hrvs.length >= 2 ? Math.round(hrvs.reduce((a, b) => a + b, 0) / hrvs.length) : Number(athlete.hrv_baseline),
+        rhrBase: rhrs.length >= 2 ? Math.round(rhrs.reduce((a, b) => a + b, 0) / rhrs.length) : Number(athlete.resting_hr),
+        sampleDays: recent.length
+      };
+    }
+
+    function computeReadiness(metric, athlete, tsb, base14) {
+      if (!metric) return null;
+      const age = calcAge(athlete.birth_date);
+      const targetSleep = age < 14 ? 9.5 : 8.0;
+      const hrvBase = base14 ? base14.hrvBase : Number(athlete.hrv_baseline);
+      const rhrBase = base14 ? base14.rhrBase : Number(athlete.resting_hr);
+
+      const sleepPts = metric.sleep_hours != null
+        ? clamp((Number(metric.sleep_hours) / targetSleep) * 100, 15, 100)
+        : 75;
+      const hrvPts = metric.hrv != null && hrvBase > 0
+        ? clamp(80 + ((Number(metric.hrv) / hrvBase) - 1) * 95, 15, 100)
+        : 75;
+      const rhrPts = metric.resting_hr != null
+        ? clamp(92 - (Number(metric.resting_hr) - rhrBase) * 6, 15, 100)
+        : 75;
+      const tsbPts = clamp(82 + (tsb || 0) * 1.4, 20, 100);
+
+      return Math.round(clamp(0.30 * sleepPts + 0.35 * hrvPts + 0.20 * rhrPts + 0.15 * tsbPts, 5, 100));
+    }
+
+    /**
+     * Build complete chronological daily telemetry (PMC, ACWR, Energy, Vitals, EF, W/kg)
+     */
+    function buildFullDailyTimeline(athlete, metrics, workouts) {
+      const todayIso = getTodayISO();
+      const allDates = [
+        ...(metrics || []).map(m => m.metric_date),
+        ...(workouts || []).map(w => w.workout_date)
+      ].filter(Boolean).sort();
+
+      if (allDates.length === 0) return [];
+
+      const earliest = new Date(allDates[0] + 'T00:00:00');
+      const end = new Date(todayIso + 'T00:00:00');
+      const minStart = new Date(end);
+      minStart.setDate(end.getDate() - 6); // at least 1W span
+      const start = earliest < minStart ? earliest : minStart;
+
+      const metricMap = {};
+      (metrics || []).forEach(m => { metricMap[m.metric_date] = m; });
+
+      const workoutByDate = {};
+      (workouts || []).forEach(w => {
+        if (!workoutByDate[w.workout_date]) workoutByDate[w.workout_date] = [];
+        workoutByDate[w.workout_date].push(w);
+      });
+
+      let ctl = 0, atl = 0;
+      const timeline = [];
+      const cursor = new Date(start);
+
+      while (cursor <= end) {
+        const iso = cursor.toISOString().slice(0, 10);
+        const dayWorkouts = workoutByDate[iso] || [];
+        const dayTrimp = dayWorkouts.reduce((acc, w) => acc + (Number(w.trimp) > 0 ? Number(w.trimp) : calcBanisterTRIMP(w.duration_min, w.avg_hr, athlete)), 0);
+        const dayDist = dayWorkouts.reduce((acc, w) => acc + (Number(w.distance_km) || 0), 0);
+
+        ctl = ctl + (dayTrimp - ctl) / 42;
+        atl = atl + (dayTrimp - atl) / 7;
+        const tsb = ctl - atl;
+        const acwr = ctl > 0.5 ? clamp(atl / ctl, 0, 2.5) : null;
+
+        const m = metricMap[iso] || null;
+        const base14 = m ? get14DayBaseline(metrics, athlete, iso) : null;
+        const energy = m ? computeReadiness(m, athlete, tsb, base14) : null;
+
+        // Average EF and W/kg for workouts on this day
+        const efs = dayWorkouts.map(w => calcEF(w).val).filter(v => v > 0);
+        const dayWeight = m?.weight_kg || athlete.weight_kg;
+        const wkgs = dayWorkouts.map(w => calcWkg(w.avg_power, dayWeight)).filter(v => v > 0);
+
+        timeline.push({
+          date: iso,
+          trimp: +dayTrimp.toFixed(1),
+          dist: +dayDist.toFixed(2),
+          woCount: dayWorkouts.length,
+          ctl: +ctl.toFixed(1),
+          atl: +atl.toFixed(1),
+          tsb: +tsb.toFixed(1),
+          acwr: acwr !== null ? +acwr.toFixed(2) : null,
+          energy,
+          rhr: m?.resting_hr != null ? Number(m.resting_hr) : null,
+          hrv: m?.hrv != null ? Number(m.hrv) : null,
+          sleep: m?.sleep_hours != null ? Number(m.sleep_hours) : null,
+          ef: efs.length ? +(efs.reduce((a, b) => a + b, 0) / efs.length).toFixed(2) : null,
+          wkg: wkgs.length ? +(wkgs.reduce((a, b) => a + b, 0) / wkgs.length).toFixed(2) : null
+        });
+
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      return timeline;
+    }
+
+    /**
+     * Slice & Aggregate Timeline for Timeframe (1D, 1W, 1M, 1Y, 2Y, 3Y, ALL)
+     */
+    function sliceAndAggregateTimeline(fullTimeline, tf) {
+      if (!fullTimeline || fullTimeline.length === 0) return { points: [], rawSlice: [] };
+
+      const today = new Date(getTodayISO() + 'T00:00:00');
+      let cutoffIso = null;
+
+      if (tf === '1D') {
+        cutoffIso = getTodayISO();
+      } else if (tf === '1W') {
+        const d = new Date(today); d.setDate(today.getDate() - 6); cutoffIso = d.toISOString().slice(0, 10);
+      } else if (tf === '1M') {
+        const d = new Date(today); d.setDate(today.getDate() - 29); cutoffIso = d.toISOString().slice(0, 10);
+      } else if (tf === '1Y') {
+        const d = new Date(today); d.setFullYear(today.getFullYear() - 1); cutoffIso = d.toISOString().slice(0, 10);
+      } else if (tf === '2Y') {
+        const d = new Date(today); d.setFullYear(today.getFullYear() - 2); cutoffIso = d.toISOString().slice(0, 10);
+      } else if (tf === '3Y') {
+        const d = new Date(today); d.setFullYear(today.getFullYear() - 3); cutoffIso = d.toISOString().slice(0, 10);
+      }
+
+      const rawSlice = cutoffIso ? fullTimeline.filter(d => d.date >= cutoffIso) : [...fullTimeline];
+      if (rawSlice.length === 0) return { points: [], rawSlice: [] };
+
+      // Determine aggregation granularity
+      let mode = 'daily';
+      if (tf === '1Y' || (tf === 'ALL' && rawSlice.length > 60 && rawSlice.length <= 420)) {
+        mode = 'weekly';
+      } else if (tf === '2Y' || tf === '3Y' || (tf === 'ALL' && rawSlice.length > 420)) {
+        mode = 'monthly';
+      }
+
+      if (mode === 'daily') {
+        return {
+          rawSlice,
+          points: rawSlice.map(d => ({ ...d, label: formatThaiShort(d.date) }))
+        };
+      }
+
+      // Group buckets (weekly or monthly)
+      const buckets = new Map();
+      rawSlice.forEach(d => {
+        let key = d.date.slice(0, 7); // YYYY-MM
+        let label = formatThaiMonthYear(key);
+        if (mode === 'weekly') {
+          const dt = new Date(d.date + 'T00:00:00');
+          const day = dt.getDay();
+          const diff = dt.getDate() - day + (day === 0 ? -6 : 1);
+          const mon = new Date(dt.setDate(diff));
+          key = mon.toISOString().slice(0, 10);
+          label = formatThaiShort(key);
+        }
+        if (!buckets.has(key)) buckets.set(key, { label, items: [] });
+        buckets.get(key).items.push(d);
+      });
+
+      const avgField = (arr, field) => {
+        const vals = arr.map(x => x[field]).filter(v => v !== null && v !== undefined && !isNaN(v));
+        return vals.length ? +(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : null;
+      };
+
+      const points = Array.from(buckets.values()).map(b => {
+        const last = b.items[b.items.length - 1];
+        return {
+          label: b.label,
+          ctl: last.ctl,
+          atl: last.atl,
+          tsb: last.tsb,
+          acwr: avgField(b.items, 'acwr'),
+          energy: avgField(b.items, 'energy') !== null ? Math.round(avgField(b.items, 'energy')) : null,
+          rhr: avgField(b.items, 'rhr') !== null ? Math.round(avgField(b.items, 'rhr')) : null,
+          hrv: avgField(b.items, 'hrv') !== null ? Math.round(avgField(b.items, 'hrv')) : null,
+          ef: avgField(b.items, 'ef'),
+          wkg: avgField(b.items, 'wkg')
+        };
+      });
+
+      return { points, rawSlice };
+    }
+
+    // =========================================================================
+    // 3. BLUNT, CONCISE COACHING ENGINES (DAILY & POST-WORKOUT)
+    // =========================================================================
+
+    /**
+     * Generate 4-Block Daily Coaching Analysis (กระชับ ตรงไปตรงมา ไม่เวิ่นเว้อ)
+     */
+    function generateDailyCoachAnalysis(athlete, latestMetric, base14, latestPmc, readiness) {
+      const zones = calcKarvonenZones(athlete);
+      const z2 = zones[1];
+      const age = calcAge(athlete.birth_date);
+      const targetSleep = age < 14 ? 9.5 : 8.0;
+
+      if (!latestMetric && !latestPmc) {
+        return {
+          verdict: 'รอข้อมูล',
+          verdictCls: 'bg-slate-900 border-slate-700 text-slate-400',
+          status: 'ยังไม่มีบันทึกสุขภาพ (Sleep / HRV / RHR) กรุณากรอกค่าเช้านี้เพื่อประเมินระบบประสาท',
+          load: 'ยังไม่มีประวัติการซ้อม นำเข้าไฟล์ .GPX หรือเพิ่ม Workout เพื่อคำนวณ ACWR & TSB',
+          plan: `เริ่มซ้อมฐานแอโรบิก Zone 2 คุมหัวใจ ${z2.lo}–${z2.hi} bpm ต่อเนื่อง 35–45 นาที`,
+          warning: 'อย่าเพิ่งอัดความเร็วสูงโดยไม่มีข้อมูลฐานหัวใจและโหลดสะสม'
+        };
+      }
+
+      // 1. สถานะร่างกาย
+      let statusText = 'ยังไม่มีบันทึกสุขภาพเช้านี้ (ประเมินจากโหลดการซ้อมเท่านั้น)';
+      if (latestMetric) {
+        const hrvDiff = latestMetric.hrv - base14.hrvBase;
+        const rhrDiff = latestMetric.resting_hr - base14.rhrBase;
+        const sleepDiff = +(latestMetric.sleep_hours - targetSleep).toFixed(1);
+        statusText = `Readiness ${readiness}% | HRV ${latestMetric.hrv} ms (${hrvDiff >= 0 ? '+' : ''}${hrvDiff} จากฐาน ${base14.hrvBase}) | RHR ${latestMetric.resting_hr} bpm (${rhrDiff >= 0 ? '+' : ''}${rhrDiff}) | นอน ${latestMetric.sleep_hours} ชม. (${sleepDiff >= 0 ? 'พอ' : 'ขาด ' + Math.abs(sleepDiff) + ' ชม.'})`;
+      }
+
+      // 2. ภาระสะสม (Load)
+      const acwr = latestPmc?.acwr ?? null;
+      const tsb = latestPmc?.tsb ?? 0;
+      let loadState = 'เริ่มต้นเก็บโหลด';
+      if (acwr !== null) {
+        if (acwr > 1.5) loadState = 'Risk (เสี่ยงบาดเจ็บสูง)';
+        else if (acwr > 1.3) loadState = 'Overreaching (โหลดพุ่งสูง)';
+        else if (acwr >= 0.8) loadState = tsb >= 5 ? 'Fresh (สดและฟิต)' : 'Optimal (สมดุลดี)';
+        else loadState = 'Underload (ซ้อมน้อยกว่าฐาน)';
+      }
+      const loadText = latestPmc
+        ? `ACWR ${acwr !== null ? acwr.toFixed(2) : '-'} (${loadState}) | CTL ${latestPmc.ctl} / ATL ${latestPmc.atl} | TSB ${tsb > 0 ? '+' : ''}${tsb}`
+        : 'ยังไม่มีประวัติ Workout สำหรับคำนวณ ACWR';
+
+      // 3. แผนซ้อมวันนี้ & Verdict
+      let verdict = 'พร้อมปานกลาง';
+      let verdictCls = 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300';
+      let planText = `วิ่ง Easy Run / ซ้อมคุมจังหวะใน Zone 2 (${z2.lo}–${z2.hi} bpm) 40–50 นาที`;
+
+      if ((readiness !== null && readiness < 45) || (acwr !== null && acwr > 1.5)) {
+        verdict = 'พักฟื้น 100%';
+        verdictCls = 'bg-rose-500/15 border-rose-500/40 text-rose-300';
+        planText = 'งดซ้อมหนักทุกชนิด พักฟื้น 100% หรือเดิน/ยืดเหยียดเบาๆ ไม่เกิน 20 นาที (HR < ' + zones[0].hi + ' bpm)';
+      } else if ((readiness !== null && readiness < 65) || (acwr !== null && acwr > 1.3)) {
+        verdict = 'ซ้อมเบาคุมโซน';
+        verdictCls = 'bg-amber-500/15 border-amber-500/40 text-amber-300';
+        planText = `ลดความหนัก 30–40% วิ่ง Zone 2 คุมหัวใจห้ามเกิน ${z2.hi} bpm หรือเล่นกีฬาแบบไม่กระชากสุดตัว`;
+      } else if (readiness !== null && readiness >= 80 && (acwr === null || acwr <= 1.3)) {
+        verdict = 'ใส่เต็มที่ได้';
+        verdictCls = 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300';
+        planText = `ร่างกายเปิดรับโหลดสูง ใส่เต็มที่ได้ (Tempo / Interval / แข่งจริง หรือกีฬาหนัก 2 ชม.) เพดาน Z4 อยู่ที่ ${zones[3].lo}–${zones[3].hi} bpm`;
+      }
+
+      // 4. จุดต้องระวัง
+      let warningText = 'รักษาวินัยการดื่มน้ำและยืดเหยียดหลังซ้อม 10 นาทีเพื่อคุม RHR พรุ่งนี้ให้นิ่ง';
+      if (acwr !== null && acwr > 1.5) {
+        warningText = `ACWR แตะ ${acwr.toFixed(2)} เสี่ยงเอ็นอักเสบ/กล้ามเนื้อฉีก ห้ามฝืนลงคอร์ทหรือสปรินต์วันนี้`;
+      } else if (latestMetric && latestMetric.sleep_hours < targetSleep - 1.2) {
+        warningText = `นอนแค่ ${latestMetric.sleep_hours} ชม. ระบบประสาทและปฏิกิริยาช้าลง เสี่ยงข้อเท้าพลิก/บาดเจ็บตอนเปลี่ยนทิศทาง`;
+      } else if (latestMetric && latestMetric.resting_hr >= base14.rhrBase + 5) {
+        warningText = `RHR พุ่งสูงกว่าฐาน +${latestMetric.resting_hr - base14.rhrBase} bpm เป็นสัญญาณความเครียดสะสมหรือเริ่มไม่สบาย`;
+      } else if (latestMetric && latestMetric.hrv <= base14.hrvBase - 12) {
+        warningText = `HRV ดิ่งต่ำกว่าฐาน ${latestMetric.hrv - base14.hrvBase} ms ร่างกายยังฟื้นตัวไม่จบ อย่าอัดโซน 4–5 ซ้ำ`;
+      } else if (tsb < -15) {
+        warningText = `TSB ติดลบหนัก (${tsb}) กล้ามเนื้อขาเริ่มล้าสะสม ควรวางวันพักเต็มวันภายใน 24–48 ชม.`;
+      }
+
+      return { verdict, verdictCls, status: statusText, load: loadText, plan: planText, warning: warningText };
+    }
+
+    /**
+     * Generate 4-Section Post-Workout Coach Report (ตรงไปตรงมา กระชับ ไม่เวิ่นเว้อ)
+     */
+    function generatePostWorkoutCoach(workout, athlete, pmcSeries) {
+      const zones = calcKarvonenZones(athlete);
+      const avgZ = getHRZone(Number(workout.avg_hr), athlete);
+      const maxHrVal = Number(workout.max_hr) > 0 ? Number(workout.max_hr) : Number(workout.avg_hr);
+      const maxZ = getHRZone(maxHrVal, athlete);
+      const trimp = Number(workout.trimp) > 0 ? Number(workout.trimp) : calcBanisterTRIMP(workout.duration_min, workout.avg_hr, athlete);
+      const ef = calcEF(workout);
+      const wkg = calcWkg(workout.avg_power, athlete.weight_kg);
+      const pace = formatPace(workout.duration_min, workout.distance_km);
+      const titleLower = (workout.title || '').toLowerCase();
+      const isEasyIntent = titleLower.includes('easy') || titleLower.includes('zone 2') || titleLower.includes('z2') || titleLower.includes('เบา') || titleLower.includes('ฟื้นฟู');
+      const isRaceIntent = titleLower.includes('race') || titleLower.includes('แข่ง') || titleLower.includes('marathon') || titleLower.includes('mini') || Number(workout.rpe) >= 9;
+
+      // Lookup ACWR on workout date
+      const dayPmc = (pmcSeries || []).find(p => p.date === workout.workout_date) || (pmcSeries || [])[pmcSeries.length - 1];
+      const acwrVal = dayPmc?.acwr ?? null;
+
+      // 1. Heart Rate Zone Evaluation (Blunt & Direct)
+      let hrVerdict = '';
+      if (workout.sport_type === 'running') {
+        if (isEasyIntent && avgZ.num >= 3) {
+          hrVerdict = `หลุดโซนชัดเจน — ตั้งเป้าวิ่งเบาแต่ Avg HR พุ่งไป ${avgZ.code} (${avgZ.name}) ทำให้ไม่ได้ฐานแอโรบิกเต็มที่และได้ความล้าแถม`;
+        } else if (isEasyIntent && avgZ.num <= 2) {
+          hrVerdict = `คุมวินัยดีมาก — เกาะอยู่ใน ${avgZ.code} (${avgZ.name}) ตรงเป้าหมายการสร้างฐานหัวใจ`;
+        } else if (isRaceIntent || avgZ.num >= 4) {
+          hrVerdict = `ความหนักระดับแข่งขันจริง — แช่ใน ${avgZ.code} (${avgZ.name}) และแตะ ${maxZ.code} ระบบหัวใจทำงานใกล้เพดาน`;
+        } else {
+          hrVerdict = `ความหนักระดับ ${avgZ.code} (${avgZ.name}) เหมาะกับการพัฒนาความทนทานกลาง-สูง`;
+        }
+      } else if (workout.sport_type === 'badminton' || workout.sport_type === 'football') {
+        if (avgZ.num >= 4) {
+          hrVerdict = `เกมหนักระดับ Anaerobic สูง (Avg ${avgZ.code} / Peak ${maxZ.code}) ใช้พลังระเบิดและกรดแลคติกเยอะมาก`;
+        } else if (avgZ.num === 3) {
+          hrVerdict = `จังหวะเกมเข้มข้นปานกลาง-สูง (Avg ${avgZ.code}) ได้ทั้งความอึดและสปีดต้นในระดับกำลังดี`;
+        } else {
+          hrVerdict = `เกมคุมจังหวะได้ดี ไม่หนักเกินไป (Avg ${avgZ.code}) ใช้เป็น Active Conditioning ได้สบาย`;
+        }
+      } else {
+        hrVerdict = `Avg HR อยู่ใน ${avgZ.code} (${avgZ.name}) | Max HR แตะ ${maxZ.code} (${maxZ.name})`;
+      }
+
+      const hrSection = `Avg HR ${workout.avg_hr} bpm (${avgZ.code}: ${avgZ.name})${Number(workout.max_hr) > 0 ? ` • Max HR ${workout.max_hr} bpm (${maxZ.code})` : ''} — ${hrVerdict}`;
+
+      // 2. Performance Metrics
+      const perfParts = [];
+      if (Number(workout.distance_km) > 0) {
+        perfParts.push(`ระยะ ${workout.distance_km} กม. (${workout.duration_min} นาที)`);
+        if (workout.sport_type === 'running') perfParts.push(`Pace เฉลี่ย ${pace}`);
+      } else {
+        perfParts.push(`เวลา ${workout.duration_min} นาที`);
+      }
+      if (Number(workout.avg_power) > 0) perfParts.push(`Power ${workout.avg_power} W (${wkg} W/kg)`);
+      if (ef.val > 0) perfParts.push(`EF ${ef.val} ${ef.unit}`);
+      perfParts.push(`TRIMP ${trimp} (${athlete.sex === 'female' ? 'หญิง' : 'ชาย'})`);
+      const perfSection = perfParts.join(' • ');
+
+      // 3. Tactics & Recovery Window
+      let recHours = 18;
+      let loadType = 'Aerobic (ใช้ไขมันและออกซิเจนเป็นหลัก)';
+      if (trimp >= 150 || avgZ.num >= 4) {
+        recHours = trimp >= 180 ? 60 : 48;
+        loadType = 'Anaerobic / High Stress (ใช้ไกลโคเจนหนักและเกิดไมโครทราวม่ากล้ามเนื้อ)';
+      } else if (trimp >= 90 || avgZ.num === 3) {
+        recHours = 30;
+        loadType = 'Mixed Tempo / Intermittent (ผสมแอโรบิกและแอนแอโรบิก)';
+      } else if (trimp < 50) {
+        recHours = 12;
+      }
+
+      const acwrNote = acwrVal !== null
+        ? (acwrVal > 1.5 ? `ดัน ACWR ขึ้นถึง ${acwrVal.toFixed(2)} (เกินโซนเสี่ยง)` : `ACWR หลังซ้อมอยู่ที่ ${acwrVal.toFixed(2)} (${acwrVal >= 0.8 && acwrVal <= 1.3 ? 'อยู่ใน Sweet Spot' : 'เฝ้าระวัง'})`)
+        : 'เริ่มเก็บฐานโหลดสะสม';
+
+      const tacticsSection = `ลักษณะโหลด: ${loadType} • แนะนำเวลาพักฟื้น ${recHours} ชม. ก่อนอัดหนักรอบถัดไป • ${acwrNote}`;
+
+      // 4. Actionable Training & Next-Session Adjustments
+      const z2 = zones[1];
+      let nextDrill = '';
+      if (workout.sport_type === 'running') {
+        if (isEasyIntent && avgZ.num >= 3) {
+          nextDrill = `1) รอบหน้าลด Pace ลง 20–30 วินาที/กม. ยอมวิ่งช้าเพื่อล็อกหัวใจให้อยู่ใน ${z2.lo}–${z2.hi} bpm ตลอดทาง  2) ตั้งเตือน HR Alert บนนาฬิกาที่ ${z2.hi} bpm`;
+        } else if (avgZ.num >= 4 || trimp >= 140) {
+          nextDrill = `1) พักซ้อมหนักอย่างน้อย ${recHours} ชม. เน้นเติมคาร์บ+โปรตีนและยืดน่อง/แฮมสตริง  2) เซสชันวิ่งถัดไปให้ทำ Easy Run 35–45 นาที คุม HR ไม่เกิน ${z2.hi} bpm เพื่อดันค่า EF ให้สูงขึ้น`;
+        } else {
+          nextDrill = `1) คงความสม่ำเสมอของ Zone 2 (${z2.lo}–${z2.hi} bpm) สัปดาห์ละ 2–3 ครั้งเพื่อกด RHR ลง  2) เพิ่ม Strides เร่งสั้น 4×100 ม. ท้ายการวิ่งเบาเพื่อกระตุ้นรอบขาโดยไม่เพิ่มความล้า`;
+        }
+      } else if (workout.sport_type === 'badminton' || workout.sport_type === 'football') {
+        if (trimp >= 120 || avgZ.num >= 4) {
+          nextDrill = `1) กีฬานี้ได้โซน Anaerobic เต็มแล้ว รอบวิ่งถัดไปห้ามลงคอร์ต Interval ซ้ำ ให้วิ่งแค่ Zone 2 (${z2.lo}–${z2.hi} bpm)  2) คูลดาวน์+โฟมโรลเลอร์ต้นขาและน่อง 10 นาที ลดอาการตึงวันรุ่งขึ้น`;
+        } else {
+          nextDrill = `1) โหลดอยู่ในเกณฑ์กำลังดี สามารถแทรก Easy Run 40 นาที (HR ${z2.lo}–${z2.hi} bpm) ในวันถัดไปเพื่อขยายความอึดตอนท้ายเกม  2) เติมเกลือแร่ชดเชยเหงื่อทันทีหลังจบเกม`;
+        }
+      } else {
+        nextDrill = `1) พักฟื้นตามกรอบ ${recHours} ชม.  2) รักษาสัดส่วนซ้อมเบา 80% (HR ${z2.lo}–${z2.hi} bpm) ต่อซ้อมหนัก 20% ตลอดสัปดาห์`;
+      }
+
+      const plainText = [
+        `[ATHLETE OS Coach Report — ${athlete.name}]`,
+        `กิจกรรม: ${workout.title || workout.sport_type} (${formatThaiDate(workout.workout_date)})`,
+        `1) Heart Rate Zone: ${hrSection}`,
+        `2) Performance: ${perfSection}`,
+        `3) Tactics: ${tacticsSection}`,
+        `4) พัฒนาต่อ: ${nextDrill}`
+      ].join('\n');
+
+      return { hrSection, perfSection, tacticsSection, nextDrill, avgZ, trimp, plainText };
+    }
+
+    function renderCoachReportBlocksHTML(report) {
+      return `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs leading-relaxed">
+          <div class="bg-slate-950/75 border border-slate-800 rounded-2xl p-3.5">
+            <p class="font-display text-[11px] font-bold text-rose-400 uppercase tracking-wide mb-1">1. Heart Rate Zone</p>
+            <p class="text-slate-200">${report.hrSection}</p>
+          </div>
+          <div class="bg-slate-950/75 border border-slate-800 rounded-2xl p-3.5">
+            <p class="font-display text-[11px] font-bold text-emerald-400 uppercase tracking-wide mb-1">2. Performance</p>
+            <p class="text-slate-200 font-num text-[11.5px]">${report.perfSection}</p>
+          </div>
+          <div class="bg-slate-950/75 border border-slate-800 rounded-2xl p-3.5">
+            <p class="font-display text-[11px] font-bold text-amber-400 uppercase tracking-wide mb-1">3. Tactics (กลยุทธ์และจังหวะ)</p>
+            <p class="text-slate-200">${report.tacticsSection}</p>
+          </div>
+          <div class="bg-slate-950/75 border border-cyan-500/30 rounded-2xl p-3.5">
+            <p class="font-display text-[11px] font-bold text-cyan-400 uppercase tracking-wide mb-1">4. การฝึกฝนและพัฒนาเพิ่มเติม</p>
+            <p class="text-slate-200">${report.nextDrill}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // 3B. AI COACH API (/api/coach) + SUPABASE CACHE + RULE-BASED FALLBACK
+    // =========================================================================
+    function createCoachBlockCard(cardCls, titleCls, titleText, bodyCls, bodyText) {
+      const card = document.createElement('div');
+      card.className = cardCls;
+      const title = document.createElement('p');
+      title.className = titleCls;
+      title.textContent = titleText;
+      const body = document.createElement('p');
+      body.className = bodyCls;
+      body.textContent = bodyText || '-';
+      card.append(title, body);
+      return card;
+    }
+
+    function renderDailyCoachBlocksSafe(container, daily) {
+      if (!container) return;
+      const cards = [
+        createCoachBlockCard(
+          'bg-slate-950/75 border border-slate-800 rounded-2xl p-3.5 text-xs leading-relaxed',
+          'font-display text-[11px] font-bold text-emerald-400 mb-1',
+          'สถานะร่างกาย:',
+          'text-slate-200',
+          daily.status
+        ),
+        createCoachBlockCard(
+          'bg-slate-950/75 border border-slate-800 rounded-2xl p-3.5 text-xs leading-relaxed',
+          'font-display text-[11px] font-bold text-cyan-400 mb-1',
+          'ภาระสะสม (Load):',
+          'text-slate-200',
+          daily.load
+        ),
+        createCoachBlockCard(
+          'bg-slate-950/75 border border-emerald-500/30 rounded-2xl p-3.5 text-xs leading-relaxed',
+          'font-display text-[11px] font-bold text-white mb-1',
+          'แผนซ้อมวันนี้:',
+          'text-emerald-200 font-medium',
+          daily.plan
+        ),
+        createCoachBlockCard(
+          'bg-slate-950/75 border border-amber-500/30 rounded-2xl p-3.5 text-xs leading-relaxed',
+          'font-display text-[11px] font-bold text-amber-400 mb-1',
+          'จุดต้องระวัง:',
+          'text-amber-100/90',
+          daily.warning
+        )
+      ];
+      container.replaceChildren(...cards);
+    }
+
+    function renderCoachReportBlocksSafe(container, report) {
+      if (!container) return;
+      const grid = document.createElement('div');
+      grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-3 text-xs leading-relaxed';
+      grid.append(
+        createCoachBlockCard(
+          'bg-slate-950/75 border border-slate-800 rounded-2xl p-3.5',
+          'font-display text-[11px] font-bold text-rose-400 uppercase tracking-wide mb-1',
+          '1. Heart Rate Zone',
+          'text-slate-200',
+          report.hrSection
+        ),
+        createCoachBlockCard(
+          'bg-slate-950/75 border border-slate-800 rounded-2xl p-3.5',
+          'font-display text-[11px] font-bold text-emerald-400 uppercase tracking-wide mb-1',
+          '2. Performance',
+          'text-slate-200 font-num text-[11.5px]',
+          report.perfSection
+        ),
+        createCoachBlockCard(
+          'bg-slate-950/75 border border-slate-800 rounded-2xl p-3.5',
+          'font-display text-[11px] font-bold text-amber-400 uppercase tracking-wide mb-1',
+          '3. Tactics (กลยุทธ์และจังหวะ)',
+          'text-slate-200',
+          report.tacticsSection
+        ),
+        createCoachBlockCard(
+          'bg-slate-950/75 border border-cyan-500/30 rounded-2xl p-3.5',
+          'font-display text-[11px] font-bold text-cyan-400 uppercase tracking-wide mb-1',
+          '4. การฝึกฝนและพัฒนาเพิ่มเติม',
+          'text-slate-200',
+          report.nextDrill
+        )
+      );
+      container.replaceChildren(grid);
+    }
+
+    function isValidDailyBrief(obj) {
+      return !!(
+        obj &&
+        typeof obj === 'object' &&
+        typeof obj.verdict === 'string' && obj.verdict.trim() &&
+        typeof obj.status === 'string' && obj.status.trim() &&
+        typeof obj.load === 'string' && obj.load.trim() &&
+        typeof obj.plan === 'string' && obj.plan.trim() &&
+        typeof obj.warning === 'string' && obj.warning.trim()
+      );
+    }
+
+    function isValidWorkoutReport(obj) {
+      return !!(
+        obj &&
+        typeof obj === 'object' &&
+        typeof obj.hrSection === 'string' && obj.hrSection.trim() &&
+        typeof obj.perfSection === 'string' && obj.perfSection.trim() &&
+        typeof obj.tacticsSection === 'string' && obj.tacticsSection.trim() &&
+        typeof obj.nextDrill === 'string' && obj.nextDrill.trim()
+      );
+    }
+
+    function getDailyVerdictClass(verdict, fallbackCls) {
+      const v = (verdict || '').toLowerCase();
+      if (v.includes('พักฟื้น') || v.includes('100%') || v.includes('งด')) {
+        return 'bg-rose-500/15 border-rose-500/40 text-rose-300';
+      }
+      if (v.includes('ซ้อมเบา') || v.includes('คุมโซน')) {
+        return 'bg-amber-500/15 border-amber-500/40 text-amber-300';
+      }
+      if (v.includes('ใส่เต็มที่')) {
+        return 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300';
+      }
+      if (v.includes('ปานกลาง')) {
+        return 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300';
+      }
+      return fallbackCls || 'bg-slate-900 border-slate-700 text-slate-300';
+    }
+
+    function updateProviderPill(el, provider, isLoading = false) {
+      if (!el) return;
+      if (isLoading) {
+        el.textContent = 'AI กำลังวิเคราะห์...';
+        el.className = 'px-2.5 py-1 rounded-full text-[10px] font-num font-semibold bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 animate-pulse';
+        return;
+      }
+      if (provider && provider.startsWith('google:')) {
+        el.textContent = `AI: ${provider.replace('google:', '')}`;
+        el.className = 'px-2.5 py-1 rounded-full text-[10px] font-num font-semibold bg-emerald-500/15 border border-emerald-500/30 text-emerald-300';
+      } else if (provider && provider.startsWith('ollama-cf:')) {
+        el.textContent = `Ollama: ${provider.replace('ollama-cf:', '')}`;
+        el.className = 'px-2.5 py-1 rounded-full text-[10px] font-num font-semibold bg-cyan-500/15 border border-cyan-500/30 text-cyan-300';
+      } else if (provider && provider !== 'rule-based-fallback' && provider !== 'rule-based') {
+        el.textContent = `AI: ${provider}`;
+        el.className = 'px-2.5 py-1 rounded-full text-[10px] font-num font-semibold bg-emerald-500/15 border border-emerald-500/30 text-emerald-300';
+      } else {
+        el.textContent = 'Rule-Based Engine';
+        el.className = 'px-2.5 py-1 rounded-full text-[10px] font-num font-semibold bg-slate-900/90 border border-slate-700 text-slate-400';
+      }
+    }
+
+    function buildWorkoutPlainText(athlete, workout, report) {
+      return [
+        `[ATHLETE OS Coach Report — ${athlete.name}]`,
+        `กิจกรรม: ${workout.title || workout.sport_type} (${formatThaiDate(workout.workout_date)})`,
+        `1) Heart Rate Zone: ${report.hrSection}`,
+        `2) Performance: ${report.perfSection}`,
+        `3) Tactics: ${report.tacticsSection}`,
+        `4) พัฒนาต่อ: ${report.nextDrill}`
+      ].join('\n');
+    }
+
+    function buildWorkoutReportView(workout, athlete, fallbackRep, aiReport) {
+      if (isValidWorkoutReport(aiReport)) {
+        const merged = {
+          ...fallbackRep,
+          hrSection: aiReport.hrSection,
+          perfSection: aiReport.perfSection,
+          tacticsSection: aiReport.tacticsSection,
+          nextDrill: aiReport.nextDrill,
+          _provider: aiReport._provider || 'ai-cached'
+        };
+        merged.plainText = buildWorkoutPlainText(athlete, workout, merged);
+        return merged;
+      }
+      return { ...fallbackRep, _provider: 'rule-based' };
+    }
+
+    async function callCoachApi(payload, abortController, timeoutMs = 25000) {
+      // Skip serverless call cleanly if opened directly from file://
+      if (window.location.protocol === 'file:') {
+        return { provider: 'rule-based-fallback', data: null };
+      }
+      try {
+        const timeoutSignal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+          ? AbortSignal.timeout(timeoutMs)
+          : null;
+        const signal = abortController && timeoutSignal && typeof AbortSignal.any === 'function'
+          ? AbortSignal.any([abortController.signal, timeoutSignal])
+          : (abortController ? abortController.signal : timeoutSignal);
+
+        const res = await fetch('/api/coach', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          ...(signal ? { signal } : {})
+        });
+
+        if (!res.ok) {
+          return { provider: 'rule-based-fallback', data: null };
+        }
+        const json = await res.json();
+        return {
+          provider: json?.provider || 'rule-based-fallback',
+          data: json?.data ?? null
+        };
+      } catch (err) {
+        if (err && (err.name === 'AbortError' || err.name === 'TimeoutError')) {
+          return { provider: 'rule-based-fallback', data: null, aborted: err.name === 'AbortError' };
+        }
+        console.warn('AI Coach API fallback:', err?.message || err);
+        return { provider: 'rule-based-fallback', data: null };
+      }
+    }
+
+    async function persistDailyAiCache(athleteId, metric, cachedBrief) {
+      metric.ai_daily_brief = cachedBrief;
+      if (isSupabaseLive && sb && metric.id && !String(metric.id).startsWith('local-')) {
+        const { error } = await sb
+          .from('daily_metrics')
+          .update({ ai_daily_brief: cachedBrief })
+          .eq('id', metric.id);
+        if (error) console.warn('Failed to cache ai_daily_brief in Supabase:', error.message);
+      } else if (!isSupabaseLive) {
+        saveLocalStorage();
+      }
+    }
+
+    async function persistWorkoutAiCache(athleteId, workout, cachedReport) {
+      workout.ai_coach_report = cachedReport;
+      if (isSupabaseLive && sb && workout.id && !String(workout.id).startsWith('local-')) {
+        const { error } = await sb
+          .from('workouts')
+          .update({ ai_coach_report: cachedReport })
+          .eq('id', workout.id);
+        if (error) console.warn('Failed to cache ai_coach_report in Supabase:', error.message);
+      } else if (!isSupabaseLive) {
+        saveLocalStorage();
+      }
+    }
+
+    function applyDailyBriefToUI(daily, fallbackCls, provider, isLoading = false, showRefresh = true) {
+      const vb = document.getElementById('daily-verdict-badge');
+      const pb = document.getElementById('daily-ai-provider');
+      const rb = document.getElementById('daily-ai-refresh-btn');
+      const blocks = document.getElementById('daily-coach-blocks');
+
+      vb.textContent = daily.verdict;
+      vb.className = `px-3 py-1 rounded-full text-xs font-bold border ${getDailyVerdictClass(daily.verdict, fallbackCls)}`;
+      updateProviderPill(pb, provider, isLoading);
+      if (rb) rb.classList.toggle('hidden', !showRefresh);
+      renderDailyCoachBlocksSafe(blocks, daily);
+    }
+
+    async function resolveDailyCoachWithAI(ath, latestMetric, base14, latestPmc, readiness, fallbackDaily, force = false) {
+      if (dailyAiAbortController) {
+        dailyAiAbortController.abort();
+        dailyAiAbortController = null;
+      }
+
+      if (!latestMetric) {
+        applyDailyBriefToUI(fallbackDaily, fallbackDaily.verdictCls, 'rule-based', false, false);
+        return;
+      }
+
+      const cached = latestMetric.ai_daily_brief;
+      if (!force && isValidDailyBrief(cached)) {
+        applyDailyBriefToUI(cached, fallbackDaily.verdictCls, cached._provider || 'ai-cached', false, true);
+        return;
+      }
+
+      // Render deterministic rule-based brief immediately so UI is never blank
+      const attemptKey = `${ath.id}:${latestMetric.metric_date}`;
+      if (!force && aiAttemptedDailyKeys.has(attemptKey)) {
+        applyDailyBriefToUI(fallbackDaily, fallbackDaily.verdictCls, 'rule-based', false, true);
+        return;
+      }
+
+      aiAttemptedDailyKeys.add(attemptKey);
+      applyDailyBriefToUI(fallbackDaily, fallbackDaily.verdictCls, 'rule-based', true, true);
+
+      const controller = new AbortController();
+      dailyAiAbortController = controller;
+
+      const result = await callCoachApi(
+        {
+          mode: 'daily',
+          athlete: ath,
+          metrics: {
+            metric_date: latestMetric.metric_date,
+            sleep_hours: latestMetric.sleep_hours,
+            hrv: latestMetric.hrv,
+            resting_hr: latestMetric.resting_hr,
+            weight_kg: latestMetric.weight_kg,
+            steps: latestMetric.steps,
+            readiness,
+            hrv_baseline_14d: base14.hrvBase,
+            rhr_baseline_14d: base14.rhrBase
+          },
+          pmc: latestPmc
+        },
+        controller
+      );
+
+      if (controller.signal.aborted) return;
+
+      if (result.data && isValidDailyBrief(result.data)) {
+        const cachedPayload = {
+          ...result.data,
+          _provider: result.provider,
+          _generatedAt: new Date().toISOString()
+        };
+        await persistDailyAiCache(ath.id, latestMetric, cachedPayload);
+        if (activeAthleteId === ath.id && currentTab === 'dashboard') {
+          applyDailyBriefToUI(cachedPayload, fallbackDaily.verdictCls, result.provider, false, true);
+          if (force) showToast(`อัปเดต Daily Brief จาก ${result.provider} แล้ว`);
+        }
+      } else if (activeAthleteId === ath.id && currentTab === 'dashboard') {
+        applyDailyBriefToUI(fallbackDaily, fallbackDaily.verdictCls, 'rule-based', false, true);
+        if (force) showToast('AI Coach ไม่พร้อมใช้งาน — ใช้ Rule-Based Engine แทน');
+      }
+    }
+
+    function applyWorkoutReportToTargets(workout, ath, reportView, isLoading = false, target = 'both') {
+      if (target === 'latest' || target === 'both') {
+        const workouts = workoutsByAthlete[ath.id] || [];
+        const latestWo = workouts.toSorted((a, b) => b.workout_date.localeCompare(a.workout_date))[0] || null;
+        if (activeAthleteId === ath.id && currentTab === 'dashboard' && latestWo && latestWo.id === workout.id) {
+          latestReportPlainText = reportView.plainText;
+          updateProviderPill(document.getElementById('latest-wo-ai-provider'), reportView._provider, isLoading);
+          renderCoachReportBlocksSafe(document.getElementById('latest-workout-coach-body'), reportView);
+        }
+      }
+      if (target === 'modal' || target === 'both') {
+        const modal = document.getElementById('modal-coach-report');
+        const isModalOpen = modal && !modal.classList.contains('hidden');
+        if (isModalOpen && activeModalWorkoutId === workout.id) {
+          modalReportPlainText = reportView.plainText;
+          updateProviderPill(document.getElementById('cr-provider'), reportView._provider, isLoading);
+          renderCoachReportBlocksSafe(document.getElementById('cr-body'), reportView);
+        }
+      }
+    }
+
+    async function resolveWorkoutCoachWithAI(workout, ath, fullTimeline, target = 'latest', force = false) {
+      const fallbackRep = generatePostWorkoutCoach(workout, ath, fullTimeline);
+
+      if (target === 'latest' && latestWoAiAbortController) {
+        latestWoAiAbortController.abort();
+        latestWoAiAbortController = null;
+      }
+      if (target === 'modal' && modalWoAiAbortController) {
+        modalWoAiAbortController.abort();
+        modalWoAiAbortController = null;
+      }
+
+      if (!force && isValidWorkoutReport(workout.ai_coach_report)) {
+        const cachedView = buildWorkoutReportView(workout, ath, fallbackRep, workout.ai_coach_report);
+        applyWorkoutReportToTargets(workout, ath, cachedView, false, target);
+        return;
+      }
+
+      const fallbackView = buildWorkoutReportView(workout, ath, fallbackRep, null);
+      if (!force && aiAttemptedWorkoutIds.has(workout.id)) {
+        applyWorkoutReportToTargets(workout, ath, fallbackView, false, target);
+        return;
+      }
+
+      aiAttemptedWorkoutIds.add(workout.id);
+      applyWorkoutReportToTargets(workout, ath, fallbackView, true, target);
+
+      const controller = new AbortController();
+      if (target === 'latest') latestWoAiAbortController = controller;
+      if (target === 'modal') modalWoAiAbortController = controller;
+
+      const dayPmc = (fullTimeline || []).find(p => p.date === workout.workout_date) || (fullTimeline || []).at(-1) || null;
+      const ef = calcEF(workout);
+      const enrichedWorkout = {
+        workout_date: workout.workout_date,
+        sport_type: workout.sport_type,
+        title: workout.title,
+        duration_min: workout.duration_min,
+        distance_km: workout.distance_km,
+        avg_hr: workout.avg_hr,
+        max_hr: workout.max_hr,
+        avg_hr_zone: `${fallbackRep.avgZ.code} (${fallbackRep.avgZ.name})`,
+        avg_power: workout.avg_power,
+        wkg: calcWkg(workout.avg_power, ath.weight_kg),
+        pace: formatPace(workout.duration_min, workout.distance_km),
+        ef: ef.val > 0 ? `${ef.val} ${ef.unit}` : null,
+        cadence: workout.cadence,
+        elevation_gain: workout.elevation_gain,
+        rpe: workout.rpe,
+        trimp: fallbackRep.trimp
+      };
+
+      const result = await callCoachApi(
+        {
+          mode: 'workout',
+          athlete: ath,
+          workout: enrichedWorkout,
+          pmc: dayPmc
+        },
+        controller
+      );
+
+      if (controller.signal.aborted) return;
+
+      if (result.data && isValidWorkoutReport(result.data)) {
+        const cachedPayload = {
+          ...result.data,
+          _provider: result.provider,
+          _generatedAt: new Date().toISOString()
+        };
+        await persistWorkoutAiCache(ath.id, workout, cachedPayload);
+        const aiView = buildWorkoutReportView(workout, ath, fallbackRep, cachedPayload);
+        applyWorkoutReportToTargets(workout, ath, aiView, false, 'both');
+        if (force) showToast(`อัปเดตบทวิเคราะห์โค้ชจาก ${result.provider} แล้ว`);
+      } else {
+        applyWorkoutReportToTargets(workout, ath, fallbackView, false, target);
+        if (force) showToast('AI Coach ไม่พร้อมใช้งาน — ใช้ Rule-Based Engine แทน');
+      }
+    }
+
+    function refreshDailyAiCoach() {
+      const ath = getActiveAthlete();
+      if (!ath) return;
+      const metrics = metricsByAthlete[ath.id] || [];
+      const workouts = workoutsByAthlete[ath.id] || [];
+      const latestMetric = metrics[0] || null;
+      if (!latestMetric) { showToast('ยังไม่มีข้อมูลสุขภาพสำหรับวิเคราะห์'); return; }
+      const fullTimeline = buildFullDailyTimeline(ath, metrics, workouts);
+      const latestPmc = fullTimeline.length ? fullTimeline[fullTimeline.length - 1] : null;
+      const base14 = get14DayBaseline(metrics, ath, latestMetric.metric_date);
+      const readiness = computeReadiness(latestMetric, ath, latestPmc ? latestPmc.tsb : 0, base14);
+      const fallbackDaily = generateDailyCoachAnalysis(ath, latestMetric, base14, latestPmc, readiness);
+      resolveDailyCoachWithAI(ath, latestMetric, base14, latestPmc, readiness, fallbackDaily, true);
+    }
+
+    function refreshLatestWorkoutAiCoach() {
+      const ath = getActiveAthlete();
+      if (!ath) return;
+      const workouts = workoutsByAthlete[ath.id] || [];
+      const latestWo = workouts.toSorted((a, b) => b.workout_date.localeCompare(a.workout_date))[0] || null;
+      if (!latestWo) return;
+      const fullTimeline = buildFullDailyTimeline(ath, metricsByAthlete[ath.id] || [], workouts);
+      resolveWorkoutCoachWithAI(latestWo, ath, fullTimeline, 'latest', true);
+    }
+
+    function refreshModalWorkoutAiCoach() {
+      const ath = getActiveAthlete();
+      if (!ath || !activeModalWorkoutId) return;
+      const workouts = workoutsByAthlete[ath.id] || [];
+      const w = workouts.find(x => x.id === activeModalWorkoutId);
+      if (!w) return;
+      const fullTimeline = buildFullDailyTimeline(ath, metricsByAthlete[ath.id] || [], workouts);
+      resolveWorkoutCoachWithAI(w, ath, fullTimeline, 'modal', true);
+    }
+
+    // =========================================================================
+    // 4. SUPABASE & LOCAL STORAGE LAYER (ZERO MOCK DATA)
+    // =========================================================================
+    function getEffectiveCreds() {
+      const url = (localStorage.getItem(LS.SB_URL) || SUPABASE_CONFIG.url || '').trim();
+      const key = (localStorage.getItem(LS.SB_KEY) || SUPABASE_CONFIG.anonKey || '').trim();
+      return { url, key };
+    }
+
+    async function initStorage() {
+      const { url, key } = getEffectiveCreds();
+      if (url && key && window.supabase) {
+        try {
+          sb = window.supabase.createClient(url, key);
+          const { data, error } = await sb.from('athletes').select('*').order('created_at', { ascending: true });
+          if (error) throw error;
+          isSupabaseLive = true;
+          athletes = data || [];
+          await fetchAllChildTablesFromSupabase();
+          updateConnectionUI(true);
+          return;
+        } catch (err) {
+          console.error('Supabase init failed:', err);
+          isSupabaseLive = false;
+          sb = null;
+        }
+      }
+      updateConnectionUI(false);
+      loadLocalStorage();
+    }
+
+    async function fetchAllChildTablesFromSupabase() {
+      metricsByAthlete = {};
+      workoutsByAthlete = {};
+      athletes.forEach(a => { metricsByAthlete[a.id] = []; workoutsByAthlete[a.id] = []; });
+      if (athletes.length === 0) return;
+
+      const [{ data: mData }, { data: wData }] = await Promise.all([
+        sb.from('daily_metrics').select('*').order('metric_date', { ascending: false }),
+        sb.from('workouts').select('*').order('workout_date', { ascending: false })
+      ]);
+
+      (mData || []).forEach(m => {
+        if (!metricsByAthlete[m.athlete_id]) metricsByAthlete[m.athlete_id] = [];
+        metricsByAthlete[m.athlete_id].push(m);
+      });
+      (wData || []).forEach(w => {
+        if (!workoutsByAthlete[w.athlete_id]) workoutsByAthlete[w.athlete_id] = [];
+        workoutsByAthlete[w.athlete_id].push(w);
+      });
+    }
+
+    function loadLocalStorage() {
+      try {
+        athletes = JSON.parse(localStorage.getItem(LS.ATHLETES) || '[]');
+        metricsByAthlete = JSON.parse(localStorage.getItem(LS.METRICS) || '{}');
+        workoutsByAthlete = JSON.parse(localStorage.getItem(LS.WORKOUTS) || '{}');
+      } catch (e) {
+        athletes = []; metricsByAthlete = {}; workoutsByAthlete = {};
+      }
+    }
+
+    function saveLocalStorage() {
+      try {
+        localStorage.setItem(LS.ATHLETES, JSON.stringify(athletes));
+        localStorage.setItem(LS.METRICS, JSON.stringify(metricsByAthlete));
+        localStorage.setItem(LS.WORKOUTS, JSON.stringify(workoutsByAthlete));
+      } catch (e) {}
+    }
+
+    function updateConnectionUI(live) {
+      const btn = document.getElementById('sb-status-btn');
+      const dot = document.getElementById('sb-dot');
+      const txt = document.getElementById('sb-status-text');
+      const shortTxt = document.getElementById('sb-status-short');
+      const banner = document.getElementById('local-warning-banner');
+
+      if (live) {
+        btn.className = 'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-xs font-semibold text-emerald-300 transition-all active:scale-95';
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+        txt.textContent = 'Supabase Connected';
+        shortTxt.textContent = 'Live';
+        banner.classList.add('hidden');
+      } else {
+        btn.className = 'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-xs font-semibold text-amber-300 transition-all active:scale-95';
+        dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+        txt.textContent = 'ยังไม่เชื่อมต่อ Supabase';
+        shortTxt.textContent = 'ตั้งค่า DB';
+        banner.classList.remove('hidden');
+      }
+    }
+
+    // =========================================================================
+    // 5. URL ROUTING (?u=slug)
+    // =========================================================================
+    function getUrlSlug() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('u')) return params.get('u').trim().toLowerCase();
+      const m = (window.location.hash || '').match(/u=([a-z0-9_-]+)/i);
+      return m ? m[1].toLowerCase() : null;
+    }
+
+    function setUrlSlug(slug) {
+      if (!slug) return;
+      try {
+        const u = new URL(window.location.href);
+        u.searchParams.set('u', slug);
+        window.history.replaceState({}, '', u.toString());
+      } catch (e) {
+        try { window.location.hash = 'u=' + slug; } catch (err) {}
+      }
+    }
+
+    function getActiveAthlete() {
+      return athletes.find(a => a.id === activeAthleteId) || athletes[0] || null;
+    }
+
+    function selectAthlete(slug) {
+      const found = athletes.find(a => a.slug === slug) || athletes[0];
+      if (!found) return;
+      activeAthleteId = found.id;
+      setUrlSlug(found.slug);
+      toggleProfileDropdown(false);
+      renderAll();
+    }
+
+    // =========================================================================
+    // 6. MAIN RENDERING CONTROLLER
+    // =========================================================================
+    function renderAll() {
+      renderTopBar();
+      renderFamilyGrid();
+
+      const ath = getActiveAthlete();
+      const emptyGlobal = document.getElementById('global-empty-athletes');
+      const wrap = document.getElementById('athlete-content-wrapper');
+      const strip = document.getElementById('active-athlete-strip');
+
+      if (!ath) {
+        wrap.classList.add('hidden');
+        strip.classList.add('hidden');
+        emptyGlobal.classList.toggle('hidden', currentTab === 'settings');
+        lucide.createIcons();
+        return;
+      }
+
+      emptyGlobal.classList.add('hidden');
+      wrap.classList.toggle('hidden', currentTab === 'settings');
+      strip.classList.remove('hidden');
+
+      const metrics = metricsByAthlete[ath.id] || [];
+      const workouts = workoutsByAthlete[ath.id] || [];
+      const fullTimeline = buildFullDailyTimeline(ath, metrics, workouts);
+
+      renderStrip(ath, metrics);
+      if (currentTab === 'dashboard') {
+        renderDashboard(ath, metrics, workouts, fullTimeline);
+      } else if (currentTab === 'workouts') {
+        renderWorkoutsTab();
+      }
+      lucide.createIcons();
+    }
+
+    function renderTopBar() {
+      const ath = getActiveAthlete();
+      document.getElementById('top-member-count').textContent = `${athletes.length}/10`;
+
+      if (!ath) {
+        document.getElementById('top-avatar').textContent = '?';
+        document.getElementById('top-name').textContent = 'ยังไม่มีสมาชิก';
+        document.getElementById('top-meta').textContent = 'เพิ่มสมาชิกเพื่อเริ่มต้น';
+        document.getElementById('profile-dropdown-list').innerHTML = `<p class="text-[11px] text-slate-400 text-center py-3">ยังไม่มีสมาชิก</p>`;
+        return;
+      }
+
+      const age = calcAge(ath.birth_date);
+      const fem = ath.sex === 'female';
+      const av = document.getElementById('top-avatar');
+      av.textContent = ath.name.charAt(0).toUpperCase();
+      av.className = fem
+        ? 'w-7 h-7 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-xs font-bold text-rose-300 shrink-0'
+        : 'w-7 h-7 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-xs font-bold text-emerald-300 shrink-0';
+
+      document.getElementById('top-name').textContent = ath.name;
+      document.getElementById('top-meta').textContent = `${age < 14 ? '🧒 เด็ก' : (fem ? '♀ หญิง' : '♂ ชาย')} • ?u=${ath.slug}`;
+
+      document.getElementById('profile-dropdown-list').innerHTML = athletes.map(a => {
+        const aAge = calcAge(a.birth_date);
+        const active = a.id === ath.id;
+        const isF = a.sex === 'female';
+        return `
+          <button onclick="selectAthlete('${a.slug}')" class="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl text-left transition-all ${active ? 'bg-emerald-500/15 border border-emerald-500/30' : 'hover:bg-slate-800 border border-transparent'}">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="w-7 h-7 rounded-lg ${isF ? 'bg-rose-500/20 text-rose-300' : 'bg-cyan-500/20 text-cyan-300'} flex items-center justify-center text-xs font-bold shrink-0">${a.name.charAt(0).toUpperCase()}</span>
+              <div class="min-w-0">
+                <p class="text-xs font-bold text-white truncate">${a.name}</p>
+                <p class="text-[10px] text-slate-400 truncate">${isF ? '♀ หญิง' : '♂ ชาย'} • ${aAge} ปี • ?u=${a.slug}</p>
+              </div>
+            </div>
+            ${active ? '<i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0"></i>' : ''}
+          </button>`;
+      }).join('');
+    }
+
+    function renderStrip(ath, metrics) {
+      const age = calcAge(ath.birth_date);
+      const isFem = ath.sex === 'female';
+      const latestW = metrics.find(m => m.weight_kg > 0)?.weight_kg || ath.weight_kg;
+      document.getElementById('strip-name').textContent = ath.name;
+      document.getElementById('strip-physio').textContent =
+        `${isFem ? '♀ หญิง' : '♂ ชาย'} • ${age} ปี • ${latestW} กก. • ${ath.height_cm} ซม. • MaxHR ${ath.max_hr} • RHR ${ath.resting_hr} • HRV ฐาน ${ath.hrv_baseline}ms`;
+
+      const fBadge = document.getElementById('strip-trimp-formula');
+      fBadge.textContent = isFem ? 'TRIMP หญิง (0.86 × e^1.67)' : 'TRIMP ชาย (0.64 × e^1.92)';
+      fBadge.className = isFem
+        ? 'px-2.5 py-0.5 rounded-lg text-[11px] font-medium border bg-rose-500/15 text-rose-300 border-rose-500/30'
+        : 'px-2.5 py-0.5 rounded-lg text-[11px] font-medium border bg-cyan-500/15 text-cyan-300 border-cyan-500/30';
+    }
+
+    function renderDashboard(ath, metrics, workouts, fullTimeline) {
+      // 1. Update Timeframe Pills
+      document.getElementById('tf-summary-label').textContent = TF_LABELS[currentTimeframe];
+      document.querySelectorAll('.tf-btn').forEach(btn => {
+        const active = btn.dataset.tf === currentTimeframe;
+        btn.className = active
+          ? 'tf-btn px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 shadow'
+          : 'tf-btn px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800';
+      });
+
+      // 2. Auto-detect Body Energy SVG Silhouette
+      const age = calcAge(ath.birth_date);
+      const isChild = age < 14;
+      const sil = SILHOUETTES[isChild ? 'child' : (ath.sex === 'female' ? 'female' : 'male')];
+      document.getElementById('body-profile-badge').textContent = isChild
+        ? `เด็ก (${ath.sex === 'female' ? 'หญิง' : 'ชาย'}) • ${age} ปี`
+        : `${ath.sex === 'female' ? '♀ หญิง' : '♂ ชาย'} • ${age} ปี`;
+
+      document.getElementById('svg-clip-path').setAttribute('d', sil.path);
+      document.getElementById('svg-base-path').setAttribute('d', sil.path);
+      document.getElementById('svg-outline-path').setAttribute('d', sil.path);
+      document.getElementById('svg-spine').setAttribute('y1', sil.spine.y1);
+      document.getElementById('svg-spine').setAttribute('y2', sil.spine.y2);
+      document.getElementById('svg-heart-ring').setAttribute('cx', sil.heart.x);
+      document.getElementById('svg-heart-ring').setAttribute('cy', sil.heart.y);
+      document.getElementById('svg-heart-dot').setAttribute('cx', sil.heart.x);
+      document.getElementById('svg-heart-dot').setAttribute('cy', sil.heart.y);
+
+      const latestMetric = metrics[0] || null;
+      const latestPmc = fullTimeline.length ? fullTimeline[fullTimeline.length - 1] : null;
+      const base14 = get14DayBaseline(metrics, ath, latestMetric ? latestMetric.metric_date : getTodayISO());
+      const readiness = computeReadiness(latestMetric, ath, latestPmc ? latestPmc.tsb : 0, base14);
+
+      const liq = document.getElementById('svg-liquid-container');
+      const outline = document.getElementById('svg-outline-path');
+      const scoreEl = document.getElementById('battery-score');
+      const unitEl = document.getElementById('battery-unit');
+      const pillEl = document.getElementById('battery-status-pill');
+      const dateSub = document.getElementById('battery-date-sub');
+      const glow1 = document.getElementById('bg-glow-1');
+
+      if (readiness === null) {
+        liq.setAttribute('opacity', '0');
+        outline.setAttribute('stroke', '#475569');
+        scoreEl.textContent = '--';
+        unitEl.className = 'font-num text-xl font-bold text-slate-500';
+        pillEl.textContent = 'รอข้อมูลสุขภาพ';
+        pillEl.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700';
+        dateSub.textContent = 'บันทึก Sleep / HRV / RHR เพื่อเริ่มคำนวณ';
+      } else {
+        liq.setAttribute('opacity', '1');
+        scoreEl.textContent = readiness;
+        dateSub.textContent = `ณ วันที่ ${formatThaiDate(latestMetric.metric_date)}`;
+        const h = sil.bottomY - sil.topY;
+        const fillY = sil.bottomY - (h * (readiness / 100)) - 10;
+        document.getElementById('energy-fill-group').setAttribute('transform', `translate(0, ${fillY.toFixed(1)})`);
+
+        const s1 = document.getElementById('g-stop-1');
+        const s2 = document.getElementById('g-stop-2');
+        const s3 = document.getElementById('g-stop-3');
+        const scan = document.getElementById('scan-stop');
+
+        if (readiness >= 80) {
+          s1.setAttribute('stop-color', '#059669'); s2.setAttribute('stop-color', '#10b981'); s3.setAttribute('stop-color', '#34d399');
+          outline.setAttribute('stroke', '#34d399'); scan.setAttribute('stop-color', '#34d399');
+          unitEl.className = 'font-num text-xl font-bold text-emerald-400';
+          pillEl.textContent = 'Peak Ready • พร้อมลุย';
+          pillEl.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/40';
+          glow1.className = 'absolute -top-36 -left-36 w-[440px] h-[440px] bg-emerald-500/15 rounded-full blur-[130px] transition-colors duration-700';
+        } else if (readiness >= 65) {
+          s1.setAttribute('stop-color', '#0891b2'); s2.setAttribute('stop-color', '#06b6d4'); s3.setAttribute('stop-color', '#22d3ee');
+          outline.setAttribute('stroke', '#22d3ee'); scan.setAttribute('stop-color', '#22d3ee');
+          unitEl.className = 'font-num text-xl font-bold text-cyan-400';
+          pillEl.textContent = 'Good • พร้อมปานกลาง';
+          pillEl.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/40';
+          glow1.className = 'absolute -top-36 -left-36 w-[440px] h-[440px] bg-cyan-500/15 rounded-full blur-[130px] transition-colors duration-700';
+        } else if (readiness >= 45) {
+          s1.setAttribute('stop-color', '#b45309'); s2.setAttribute('stop-color', '#f59e0b'); s3.setAttribute('stop-color', '#fbbf24');
+          outline.setAttribute('stroke', '#fbbf24'); scan.setAttribute('stop-color', '#fbbf24');
+          unitEl.className = 'font-num text-xl font-bold text-amber-400';
+          pillEl.textContent = 'Moderate • คุมโซนเบา';
+          pillEl.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/40';
+          glow1.className = 'absolute -top-36 -left-36 w-[440px] h-[440px] bg-amber-500/15 rounded-full blur-[130px] transition-colors duration-700';
+        } else {
+          s1.setAttribute('stop-color', '#991b1b'); s2.setAttribute('stop-color', '#ef4444'); s3.setAttribute('stop-color', '#f87171');
+          outline.setAttribute('stroke', '#f87171'); scan.setAttribute('stop-color', '#f87171');
+          unitEl.className = 'font-num text-xl font-bold text-rose-400';
+          pillEl.textContent = 'Low • พักฟื้น 100%';
+          pillEl.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-300 border border-rose-500/40';
+          glow1.className = 'absolute -top-36 -left-36 w-[440px] h-[440px] bg-rose-500/15 rounded-full blur-[130px] transition-colors duration-700';
+        }
+      }
+
+      // 5 Vital Pills under SVG
+      document.getElementById('bat-sleep').textContent = latestMetric?.sleep_hours != null ? `${latestMetric.sleep_hours}ช.` : '--';
+      document.getElementById('bat-hrv').textContent = latestMetric?.hrv != null ? `${latestMetric.hrv}` : '--';
+      document.getElementById('bat-rhr').textContent = latestMetric?.resting_hr != null ? `${latestMetric.resting_hr}` : '--';
+      document.getElementById('bat-weight').textContent = `${latestMetric?.weight_kg || ath.weight_kg}`;
+      document.getElementById('bat-acwr').textContent = latestPmc?.acwr != null ? latestPmc.acwr.toFixed(2) : '--';
+
+      // 3. Daily Coach Brief (4 Blunt Blocks — AI Coach + Supabase Cache + Rule-Based Fallback)
+      const daily = generateDailyCoachAnalysis(ath, latestMetric, base14, latestPmc, readiness);
+      resolveDailyCoachWithAI(ath, latestMetric, base14, latestPmc, readiness, daily, false);
+
+      // Karvonen 5 Zones
+      const zones = calcKarvonenZones(ath);
+      document.getElementById('karvonen-meta').textContent = `Max ${ath.max_hr} / RHR ${ath.resting_hr}`;
+      document.getElementById('karvonen-zones-box').innerHTML = zones.map(z => `
+        <div class="rounded-xl py-1.5 px-1 bg-slate-950/80 border ${z.cls}">
+          <p class="font-num text-[10px] font-bold">${z.code}</p>
+          <p class="font-num text-[10px] text-white font-semibold">${z.lo}–${z.hi}</p>
+        </div>
+      `).join('');
+
+      // 4. Latest Post-Workout Coaching Card
+      const latestWo = workouts.toSorted((a, b) => b.workout_date.localeCompare(a.workout_date))[0] || null;
+      const woSub = document.getElementById('latest-wo-subtitle');
+      const woActs = document.getElementById('latest-wo-actions');
+      const woBody = document.getElementById('latest-workout-coach-body');
+
+      if (!latestWo) {
+        if (latestWoAiAbortController) {
+          latestWoAiAbortController.abort();
+          latestWoAiAbortController = null;
+        }
+        woSub.textContent = 'ยังไม่มีบันทึก Workout';
+        woActs.classList.add('hidden');
+        latestReportPlainText = '';
+        woBody.innerHTML = `
+          <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-6 text-center">
+            <p class="text-xs text-slate-400 mb-3">นำเข้าไฟล์ .GPX หรือเพิ่ม Workout เพื่อรับบทวิเคราะห์ HR Zone, Performance, Tactics และแนวทางพัฒนา</p>
+            <button onclick="switchTab('workouts')" class="px-4 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 text-xs font-bold">ไปที่หน้าบันทึก / นำเข้า GPX</button>
+          </div>`;
+      } else {
+        woSub.textContent = `${latestWo.title || latestWo.sport_type} • ${formatThaiDate(latestWo.workout_date)}`;
+        woActs.classList.remove('hidden');
+        resolveWorkoutCoachWithAI(latestWo, ath, fullTimeline, 'latest', false);
+      }
+
+      // 5. Timeframe Summary & 3 Line Charts
+      const { points, rawSlice } = sliceAndAggregateTimeline(fullTimeline, currentTimeframe);
+
+      const energies = rawSlice.map(d => d.energy).filter(v => v !== null);
+      document.getElementById('sum-energy').textContent = energies.length
+        ? `${Math.round(energies.reduce((a, b) => a + b, 0) / energies.length)}%` : '--';
+      const woTotal = rawSlice.reduce((a, b) => a + b.woCount, 0);
+      const trimpTotal = rawSlice.reduce((a, b) => a + b.trimp, 0);
+      const distTotal = rawSlice.reduce((a, b) => a + b.dist, 0);
+      document.getElementById('sum-workouts').textContent = `${woTotal} ครั้ง`;
+      document.getElementById('sum-trimp').textContent = Math.round(trimpTotal);
+      document.getElementById('sum-dist').textContent = `${distTotal.toFixed(1)} กม.`;
+
+      renderDashboardLineCharts(points);
+    }
+
+    function renderDashboardLineCharts(points) {
+      if (chartEnergy) { chartEnergy.destroy(); chartEnergy = null; }
+      if (chartPmc) { chartPmc.destroy(); chartPmc = null; }
+      if (chartAcwrEf) { chartAcwrEf.destroy(); chartAcwrEf = null; }
+
+      const labels = points.map(p => p.label);
+      const gridColor = 'rgba(148, 163, 184, 0.08)';
+      const tickStyle = { color: '#94a3b8', font: { size: 11, family: 'JetBrains Mono' } };
+      const ptRad = points.length <= 14 ? 4 : (points.length <= 45 ? 2.5 : 1.5);
+
+      // ---- CHART 1: Body Energy % & RHR / HRV ----
+      const hasVitals = points.some(p => p.energy !== null || p.rhr !== null || p.hrv !== null);
+      document.getElementById('chart1-empty').classList.toggle('hidden', hasVitals);
+      document.getElementById('chart1-wrap').classList.toggle('hidden', !hasVitals);
+
+      if (hasVitals) {
+        chartEnergy = new Chart(document.getElementById('chart-energy-vitals').getContext('2d'), {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'Body Energy (%)',
+                data: points.map(p => p.energy),
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                fill: true,
+                borderWidth: 2.6,
+                tension: 0.35,
+                spanGaps: true,
+                pointRadius: ptRad,
+                yAxisID: 'y'
+              },
+              {
+                label: 'HRV (ms)',
+                data: points.map(p => p.hrv),
+                borderColor: '#22d3ee',
+                borderWidth: 2,
+                tension: 0.35,
+                spanGaps: true,
+                pointRadius: ptRad,
+                yAxisID: 'y1'
+              },
+              {
+                label: 'RHR (bpm)',
+                data: points.map(p => p.rhr),
+                borderColor: '#f43f5e',
+                borderDash: [4, 3],
+                borderWidth: 2,
+                tension: 0.35,
+                spanGaps: true,
+                pointRadius: ptRad,
+                yAxisID: 'y1'
+              }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { grid: { display: false }, ticks: { ...tickStyle, maxTicksLimit: 9 } },
+              y: { position: 'left', min: 0, max: 100, grid: { color: gridColor }, ticks: tickStyle },
+              y1: { position: 'right', grid: { display: false }, ticks: tickStyle }
+            }
+          }
+        });
+      }
+
+      // ---- CHART 2: PMC (CTL, ATL, TSB) Multi-Line ----
+      const hasPmc = points.some(p => p.ctl > 0 || p.atl > 0);
+      document.getElementById('chart2-empty').classList.toggle('hidden', hasPmc);
+      document.getElementById('chart2-wrap').classList.toggle('hidden', !hasPmc);
+
+      if (hasPmc) {
+        chartPmc = new Chart(document.getElementById('chart-pmc').getContext('2d'), {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              { label: 'CTL (ความฟิต 42d)', data: points.map(p => p.ctl), borderColor: '#22d3ee', borderWidth: 2.5, tension: 0.35, pointRadius: ptRad, yAxisID: 'y' },
+              { label: 'ATL (ความล้า 7d)', data: points.map(p => p.atl), borderColor: '#f59e0b', borderWidth: 2.2, tension: 0.35, pointRadius: ptRad, yAxisID: 'y' },
+              { label: 'TSB (ความสด)', data: points.map(p => p.tsb), borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.1)', fill: true, borderWidth: 2, tension: 0.35, pointRadius: ptRad, yAxisID: 'y1' }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { grid: { display: false }, ticks: { ...tickStyle, maxTicksLimit: 8 } },
+              y: { position: 'left', grid: { color: gridColor }, ticks: tickStyle },
+              y1: { position: 'right', grid: { display: false }, ticks: tickStyle }
+            }
+          }
+        });
+      }
+
+      // ---- CHART 3: ACWR (Safe Zone 0.8–1.3) + EF & W/kg ----
+      const hasC3 = points.some(p => p.acwr !== null || p.ef !== null || p.wkg !== null);
+      document.getElementById('chart3-empty').classList.toggle('hidden', hasC3);
+      document.getElementById('chart3-wrap').classList.toggle('hidden', !hasC3);
+
+      if (hasC3) {
+        const safeZonePlugin = {
+          id: 'acwrBand',
+          beforeDraw(chart) {
+            const { ctx, chartArea: { left, right, top }, scales: { y } } = chart;
+            if (!y) return;
+            ctx.save();
+            const y13 = y.getPixelForValue(1.3);
+            const y08 = y.getPixelForValue(0.8);
+            const y15 = y.getPixelForValue(1.5);
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.13)';
+            ctx.fillRect(left, y13, right - left, y08 - y13);
+            ctx.fillStyle = 'rgba(244, 63, 94, 0.12)';
+            ctx.fillRect(left, top, right - left, Math.max(0, y15 - top));
+            ctx.restore();
+          }
+        };
+
+        chartAcwrEf = new Chart(document.getElementById('chart-acwr-ef').getContext('2d'), {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              { label: 'ACWR (0.8–1.3 ปลอดภัย)', data: points.map(p => p.acwr), borderColor: '#f8fafc', borderWidth: 2.3, tension: 0.3, spanGaps: true, pointRadius: ptRad, yAxisID: 'y' },
+              { label: 'Efficiency Factor (EF)', data: points.map(p => p.ef), borderColor: '#38bdf8', borderWidth: 2.2, tension: 0.3, spanGaps: true, pointRadius: Math.max(ptRad, 3), yAxisID: 'y1' },
+              { label: 'Power-to-Weight (W/kg)', data: points.map(p => p.wkg), borderColor: '#34d399', borderDash: [4, 3], borderWidth: 2.2, tension: 0.3, spanGaps: true, pointRadius: Math.max(ptRad, 3), yAxisID: 'y1' }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 10 }, boxWidth: 10 } } },
+            scales: {
+              x: { grid: { display: false }, ticks: { ...tickStyle, maxTicksLimit: 8 } },
+              y: { position: 'left', min: 0.3, max: 2.0, grid: { color: gridColor }, ticks: tickStyle },
+              y1: { position: 'right', grid: { display: false }, ticks: tickStyle }
+            }
+          },
+          plugins: [safeZonePlugin]
+        });
+      }
+    }
+
+    function renderWorkoutsTab() {
+      const ath = getActiveAthlete();
+      if (!ath) return;
+      const workouts = workoutsByAthlete[ath.id] || [];
+      const q = (document.getElementById('workout-search')?.value || '').trim().toLowerCase();
+
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        const active = btn.dataset.filter === currentFilter;
+        btn.className = active
+          ? 'filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 bg-emerald-500 text-slate-950'
+          : 'filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 bg-slate-900 border border-slate-800 text-slate-300 hover:text-white';
+      });
+
+      const filtered = workouts
+        .filter(w => currentFilter === 'all' || w.sport_type === currentFilter)
+        .filter(w => !q || (w.title || '').toLowerCase().includes(q) || (w.sport_type || '').toLowerCase().includes(q))
+        .sort((a, b) => b.workout_date.localeCompare(a.workout_date));
+
+      const box = document.getElementById('workout-list');
+      if (filtered.length === 0) {
+        box.innerHTML = `
+          <div class="glass-card rounded-3xl p-8 text-center">
+            <p class="text-sm font-semibold text-white mb-1">ยังไม่มีรายการ Workout</p>
+            <p class="text-xs text-slate-400">นำเข้าไฟล์ .GPX จาก Amazfit / Zepp หรือเพิ่มบันทึกการซ้อมด้วยตนเองด้านบน</p>
+          </div>`;
+        return;
+      }
+
+      const metaMap = {
+        running: { emoji: '🏃', label: 'วิ่ง', cls: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' },
+        badminton: { emoji: '🏸', label: 'แบดมินตัน', cls: 'bg-amber-500/15 border-amber-500/30 text-amber-300' },
+        football: { emoji: '⚽', label: 'ฟุตบอล', cls: 'bg-cyan-500/15 border-cyan-500/30 text-cyan-300' },
+        cycling: { emoji: '🚴', label: 'ปั่นจักรยาน', cls: 'bg-sky-500/15 border-sky-500/30 text-sky-300' },
+        other: { emoji: '🤸', label: 'อื่นๆ', cls: 'bg-indigo-500/15 border-indigo-500/30 text-indigo-300' }
+      };
+
+      box.innerHTML = filtered.map(w => {
+        const sm = metaMap[w.sport_type] || metaMap.other;
+        const z = getHRZone(Number(w.avg_hr), ath);
+        const ef = calcEF(w);
+        const wkg = calcWkg(w.avg_power, ath.weight_kg);
+        const trimp = Number(w.trimp) > 0 ? w.trimp : calcBanisterTRIMP(w.duration_min, w.avg_hr, ath);
+
+        return `
+          <div onclick="openCoachReportModal('${w.id}')" class="glass-card rounded-2xl p-4 sm:p-5 hover:border-cyan-500/50 cursor-pointer transition-all group">
+            <div class="flex flex-wrap items-start justify-between gap-2 mb-3">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl border ${sm.cls} flex items-center justify-center text-lg shrink-0">${sm.emoji}</div>
+                <div>
+                  <h4 class="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">${w.title || sm.label}</h4>
+                  <p class="text-xs text-slate-400">${formatThaiDate(w.workout_date)} • ${sm.label} • <span class="font-num text-[10px] text-cyan-400">คลิกอ่านบทวิเคราะห์โค้ช →</span></p>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5" onclick="event.stopPropagation()">
+                <span class="font-num px-2 py-1 rounded-lg bg-slate-800 border border-slate-700 text-amber-300 text-[11px] font-bold">${z.code}</span>
+                <span class="font-num px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-bold">TRIMP ${trimp}</span>
+                <button onclick="askDeleteWorkout('${w.id}', '${(w.title || sm.label).replace(/'/g, "\\'")}')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400" title="ลบรายการ">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div class="bg-slate-950/75 rounded-xl p-2.5">
+                <span class="text-[10px] text-slate-400 block">เวลา / ระยะทาง</span>
+                <span class="font-num font-bold text-white">${w.duration_min} นาที${Number(w.distance_km) > 0 ? ` • ${w.distance_km} กม.` : ''}</span>
+              </div>
+              <div class="bg-slate-950/75 rounded-xl p-2.5">
+                <span class="text-[10px] text-slate-400 block">Avg / Max HR</span>
+                <span class="font-num font-bold text-rose-300">${w.avg_hr} bpm${Number(w.max_hr) > 0 ? ` / ${w.max_hr}` : ''}</span>
+              </div>
+              <div class="bg-slate-950/75 rounded-xl p-2.5">
+                <span class="text-[10px] text-slate-400 block">Power / W/kg</span>
+                <span class="font-num font-bold text-emerald-300">${Number(w.avg_power) > 0 ? `${w.avg_power} W (${wkg})` : '—'}</span>
+              </div>
+              <div class="bg-slate-950/75 rounded-xl p-2.5">
+                <span class="text-[10px] text-slate-400 block">Efficiency (EF)</span>
+                <span class="font-num font-bold text-cyan-300">${ef.val > 0 ? `${ef.val}` : '—'}</span>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function renderFamilyGrid() {
+      document.getElementById('settings-member-count').textContent = `${athletes.length} / 10 คน`;
+      const grid = document.getElementById('family-grid');
+      if (athletes.length === 0) {
+        grid.innerHTML = `
+          <div class="md:col-span-2 lg:col-span-3 glass-card rounded-3xl p-8 text-center">
+            <p class="text-sm font-semibold text-white mb-1">ยังไม่มีสมาชิกในครอบครัว</p>
+            <p class="text-xs text-slate-400 mb-4">เพิ่มสมาชิกคนแรกเพื่อเริ่มเก็บสถิติและสร้างลิงก์ ?u=slug</p>
+            <button onclick="openAthleteModal()" class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">+ เพิ่มสมาชิกคนแรก</button>
+          </div>`;
+        return;
+      }
+
+      const activeAth = getActiveAthlete();
+      grid.innerHTML = athletes.map(a => {
+        const age = calcAge(a.birth_date);
+        const fem = a.sex === 'female';
+        const isCurrent = activeAth && a.id === activeAth.id;
+        const wCount = (workoutsByAthlete[a.id] || []).length;
+
+        return `
+          <div class="glass-card rounded-3xl p-5 flex flex-col justify-between ${isCurrent ? 'border-emerald-500/50 ring-1 ring-emerald-500/25' : ''}">
+            <div>
+              <div class="flex items-start justify-between gap-2 mb-3">
+                <div class="flex items-center gap-3 min-w-0">
+                  <div class="w-11 h-11 rounded-2xl ${fem ? 'bg-rose-500/20 border-rose-500/40 text-rose-300' : 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300'} border flex items-center justify-center font-display text-base font-extrabold shrink-0">
+                    ${a.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div class="min-w-0">
+                    <h4 class="text-sm font-bold text-white truncate">${a.name}</h4>
+                    <p class="font-num text-[11px] text-cyan-400 truncate">?u=${a.slug}</p>
+                  </div>
+                </div>
+                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full ${fem ? 'bg-rose-500/15 text-rose-300' : 'bg-cyan-500/15 text-cyan-300'} shrink-0">
+                  ${age < 14 ? '🧒 เด็ก' : (fem ? '♀ หญิง' : '♂ ชาย')}
+                </span>
+              </div>
+              <div class="grid grid-cols-3 gap-2 text-center text-xs my-3">
+                <div class="bg-slate-950/75 rounded-xl p-2"><p class="text-[10px] text-slate-400">อายุ / หนัก</p><p class="font-num font-bold text-white">${age}ปี / ${a.weight_kg}กก.</p></div>
+                <div class="bg-slate-950/75 rounded-xl p-2"><p class="text-[10px] text-slate-400">Max / RHR</p><p class="font-num font-bold text-rose-300">${a.max_hr} / ${a.resting_hr}</p></div>
+                <div class="bg-slate-950/75 rounded-xl p-2"><p class="text-[10px] text-slate-400">HRV / ซ้อม</p><p class="font-num font-bold text-emerald-300">${a.hrv_baseline} / ${wCount}</p></div>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 pt-3 border-t border-slate-800/80">
+              <button onclick="selectAthlete('${a.slug}'); switchTab('dashboard');" class="flex-1 py-2 rounded-xl text-xs font-semibold ${isCurrent ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-slate-800 hover:bg-slate-700 text-white'}">
+                ${isCurrent ? 'กำลังดูอยู่' : 'เปิดแดชบอร์ด'}
+              </button>
+              <button onclick="copyPersonalUrl('${a.slug}')" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300" title="คัดลอกลิงก์ส่วนตัว"><i data-lucide="link-2" class="w-4 h-4"></i></button>
+              <button onclick="openAthleteModal('${a.id}')" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300" title="แก้ไข"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+              <button onclick="askDeleteAthlete('${a.id}', '${a.name.replace(/'/g, "\\'")}')" class="p-2 rounded-xl bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400" title="ลบ"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // =========================================================================
+    // 7. POST-WORKOUT COACH REPORT MODAL
+    // =========================================================================
+    function openCoachReportModal(workoutId) {
+      const ath = getActiveAthlete();
+      if (!ath) return;
+      const workouts = workoutsByAthlete[ath.id] || [];
+      const w = workouts.find(x => x.id === workoutId);
+      if (!w) return;
+
+      activeModalWorkoutId = w.id;
+      const fullTimeline = buildFullDailyTimeline(ath, metricsByAthlete[ath.id] || [], workouts);
+      const rep = generatePostWorkoutCoach(w, ath, fullTimeline);
+
+      document.getElementById('cr-title').textContent = w.title || w.sport_type;
+      document.getElementById('cr-meta').textContent = `${ath.name} • ${formatThaiDate(w.workout_date)} • ${w.duration_min} นาที • TRIMP ${rep.trimp}`;
+      openModal('modal-coach-report');
+      resolveWorkoutCoachWithAI(w, ath, fullTimeline, 'modal', false);
+    }
+
+    function copyLatestWorkoutReport() {
+      if (!latestReportPlainText) return;
+      copyText(latestReportPlainText, 'คัดลอกบทวิเคราะห์ Workout ล่าสุดแล้ว');
+    }
+
+    function copyModalCoachReport() {
+      if (!modalReportPlainText) return;
+      copyText(modalReportPlainText, 'คัดลอกบทวิเคราะห์โค้ชแล้ว');
+    }
+
+    // =========================================================================
+    // 8. GPX PARSER (DRAG & DROP + IMMEDIATE POST-WORKOUT REPORT)
+    // =========================================================================
+    function haversineKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function processGpxFile(file) {
+      const ath = getActiveAthlete();
+      if (!ath) { showToast('กรุณาสร้างโปรไฟล์สมาชิกก่อน'); return; }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const doc = new DOMParser().parseFromString(ev.target.result, 'text/xml');
+          const pts = Array.from(doc.getElementsByTagName('trkpt'));
+          if (pts.length < 2) { showToast('ไม่พบจุดพิกัดในไฟล์ GPX'); return; }
+
+          let totalDistKm = 0, eleGain = 0, hrSum = 0, hrCount = 0, maxHr = 0, cadSum = 0, cadCount = 0;
+          let startTime = null, endTime = null, prevLat = null, prevLon = null, prevEle = null;
+
+          pts.forEach(pt => {
+            const lat = parseFloat(pt.getAttribute('lat'));
+            const lon = parseFloat(pt.getAttribute('lon'));
+            if (prevLat !== null && !isNaN(lat) && !isNaN(lon)) {
+              const seg = haversineKm(prevLat, prevLon, lat, lon);
+              if (seg < 0.5) totalDistKm += seg;
+            }
+            prevLat = lat; prevLon = lon;
+
+            const tEl = pt.getElementsByTagName('time')[0];
+            if (tEl?.textContent) {
+              const t = new Date(tEl.textContent);
+              if (!startTime) startTime = t;
+              endTime = t;
+            }
+            const eEl = pt.getElementsByTagName('ele')[0];
+            if (eEl) {
+              const ele = parseFloat(eEl.textContent);
+              if (prevEle !== null && ele > prevEle && (ele - prevEle) < 5) eleGain += (ele - prevEle);
+              prevEle = ele;
+            }
+            const hrEl = pt.getElementsByTagNameNS('*', 'hr')[0] || pt.getElementsByTagName('hr')[0];
+            if (hrEl) {
+              const hr = parseInt(hrEl.textContent, 10);
+              if (hr > 30 && hr < 230) { hrSum += hr; hrCount++; if (hr > maxHr) maxHr = hr; }
+            }
+            const cadEl = pt.getElementsByTagNameNS('*', 'cad')[0] || pt.getElementsByTagName('cad')[0];
+            if (cadEl) {
+              const c = parseInt(cadEl.textContent, 10);
+              if (c > 0) { cadSum += c; cadCount++; }
+            }
+          });
+
+          const durationMin = startTime && endTime ? Math.max(1, +((endTime - startTime) / 60000).toFixed(2)) : +(pts.length / 60).toFixed(2);
+          const avgHr = hrCount > 0 ? Math.round(hrSum / hrCount) : ath.resting_hr + 70;
+          let avgCad = cadCount > 0 ? Math.round(cadSum / cadCount) : 0;
+          if (avgCad > 0 && avgCad < 110) avgCad *= 2;
+          const workoutDate = startTime ? new Date(startTime.getTime() - startTime.getTimezoneOffset() * 60000).toISOString().slice(0, 10) : getTodayISO();
+          const trkName = doc.getElementsByTagName('name')[1]?.textContent || doc.getElementsByTagName('name')[0]?.textContent || file.name.replace(/\.gpx$/i, '');
+          const trimp = calcBanisterTRIMP(durationMin, avgHr, ath);
+
+          parsedGpxDraft = {
+            athlete_id: ath.id,
+            external_id: `gpx_${ath.slug}_${startTime ? startTime.getTime() : file.name}`,
+            workout_date: workoutDate,
+            title: trkName.trim(),
+            duration_min: durationMin,
+            distance_km: +totalDistKm.toFixed(2),
+            avg_hr: avgHr,
+            max_hr: maxHr,
+            cadence: avgCad,
+            elevation_gain: +eleGain.toFixed(1),
+            trimp,
+            source: 'gpx_upload'
+          };
+
+          document.getElementById('gpx-prev-title').textContent = parsedGpxDraft.title;
+          document.getElementById('gpx-prev-date').textContent = formatThaiDate(parsedGpxDraft.workout_date);
+          document.getElementById('gpx-prev-dist').textContent = `${parsedGpxDraft.distance_km} กม.`;
+          document.getElementById('gpx-prev-dur').textContent = `${parsedGpxDraft.duration_min} นาที`;
+          document.getElementById('gpx-prev-hr').textContent = `${parsedGpxDraft.avg_hr} / ${parsedGpxDraft.max_hr}`;
+          document.getElementById('gpx-prev-ele').textContent = `+${parsedGpxDraft.elevation_gain} ม.`;
+          document.getElementById('gpx-prev-trimp').textContent = parsedGpxDraft.trimp;
+          document.getElementById('gpx-preview-box').classList.remove('hidden');
+        } catch (err) {
+          console.error(err);
+          showToast('อ่านไฟล์ GPX ไม่สำเร็จ');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function handleGpxFileSelect(e) {
+      const f = e.target.files?.[0];
+      if (f) processGpxFile(f);
+      e.target.value = '';
+    }
+
+    function cancelGpxPreview() {
+      parsedGpxDraft = null;
+      document.getElementById('gpx-preview-box').classList.add('hidden');
+    }
+
+    async function saveParsedGpxWorkout() {
+      if (!parsedGpxDraft) return;
+      const ath = getActiveAthlete();
+      const payload = {
+        ...parsedGpxDraft,
+        sport_type: document.getElementById('gpx-sport-type').value,
+        avg_power: Number(document.getElementById('gpx-power-in').value) || 0,
+        rpe: Number(document.getElementById('gpx-rpe-in').value) || 7
+      };
+
+      let savedId = null;
+      if (isSupabaseLive && sb) {
+        const { data, error } = await sb.from('workouts').upsert(payload, { onConflict: 'external_id' }).select().single();
+        if (error) { showToast('บันทึกไม่สำเร็จ: ' + error.message); return; }
+        savedId = data.id;
+        if (!workoutsByAthlete[ath.id]) workoutsByAthlete[ath.id] = [];
+        workoutsByAthlete[ath.id] = [data, ...workoutsByAthlete[ath.id].filter(w => w.id !== data.id)];
+      } else {
+        payload.id = 'local-gpx-' + Date.now();
+        savedId = payload.id;
+        if (!workoutsByAthlete[ath.id]) workoutsByAthlete[ath.id] = [];
+        workoutsByAthlete[ath.id].unshift(payload);
+        saveLocalStorage();
+      }
+
+      cancelGpxPreview();
+      renderAll();
+      showToast('นำเข้า GPX สำเร็จ — เปิดบทวิเคราะห์โค้ช');
+      openCoachReportModal(savedId);
+    }
+
+    // =========================================================================
+    // 9. CRUD HANDLERS
+    // =========================================================================
+    function openAthleteModal(editId = null) {
+      if (!editId && athletes.length >= 10) { showToast('ครบสูงสุด 10 สมาชิกแล้ว'); return; }
+      document.getElementById('form-athlete').reset();
+      if (editId) {
+        const a = athletes.find(x => x.id === editId);
+        if (!a) return;
+        document.getElementById('modal-athlete-title').textContent = `แก้ไขโปรไฟล์: ${a.name}`;
+        document.getElementById('a-id').value = a.id;
+        document.getElementById('a-name').value = a.name;
+        document.getElementById('a-slug').value = a.slug;
+        document.getElementById('a-sex').value = a.sex;
+        document.getElementById('a-birth').value = a.birth_date;
+        document.getElementById('a-weight').value = a.weight_kg;
+        document.getElementById('a-height').value = a.height_cm;
+        document.getElementById('a-maxhr').value = a.max_hr;
+        document.getElementById('a-rhr').value = a.resting_hr;
+        document.getElementById('a-hrv').value = a.hrv_baseline;
+      } else {
+        document.getElementById('modal-athlete-title').textContent = '+ เพิ่มสมาชิกครอบครัวใหม่';
+        document.getElementById('a-id').value = '';
+        autoCalculateMaxHR(false);
+      }
+      openModal('modal-athlete');
+    }
+
+    function autoCalculateMaxHR(notify = true) {
+      const sex = document.getElementById('a-sex').value;
+      const age = calcAge(document.getElementById('a-birth').value);
+      const hr = formulaMaxHR(sex, age);
+      document.getElementById('a-maxhr').value = hr;
+      if (notify) showToast(`Max HR = ${hr} bpm (อายุ ${age} ปี • ${age < 14 ? 'เด็ก' : (sex === 'female' ? 'Gulati หญิง' : 'Tanaka ชาย')})`);
+    }
+
+    async function handleSaveAthlete(e) {
+      e.preventDefault();
+      const editId = document.getElementById('a-id').value;
+      const slug = document.getElementById('a-slug').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+      if (athletes.some(a => a.slug === slug && a.id !== editId)) { showToast(`Slug "?u=${slug}" ถูกใช้แล้ว`); return; }
+
+      const payload = {
+        slug,
+        name: document.getElementById('a-name').value.trim(),
+        sex: document.getElementById('a-sex').value,
+        birth_date: document.getElementById('a-birth').value,
+        weight_kg: Number(document.getElementById('a-weight').value),
+        height_cm: Number(document.getElementById('a-height').value),
+        max_hr: Number(document.getElementById('a-maxhr').value),
+        resting_hr: Number(document.getElementById('a-rhr').value),
+        hrv_baseline: Number(document.getElementById('a-hrv').value)
+      };
+
+      if (editId) {
+        if (isSupabaseLive && sb) {
+          const { data, error } = await sb.from('athletes').update(payload).eq('id', editId).select().single();
+          if (error) { showToast('อัปเดตไม่สำเร็จ: ' + error.message); return; }
+          athletes[athletes.findIndex(a => a.id === editId)] = data;
+        } else {
+          const i = athletes.findIndex(a => a.id === editId);
+          athletes[i] = { ...athletes[i], ...payload };
+          saveLocalStorage();
+        }
+        if (activeAthleteId === editId) setUrlSlug(slug);
+        showToast(`อัปเดตโปรไฟล์ ${payload.name} แล้ว`);
+      } else {
+        if (isSupabaseLive && sb) {
+          const { data, error } = await sb.from('athletes').insert(payload).select().single();
+          if (error) { showToast('เพิ่มไม่สำเร็จ: ' + error.message); return; }
+          athletes.push(data);
+          metricsByAthlete[data.id] = []; workoutsByAthlete[data.id] = [];
+          activeAthleteId = data.id;
+        } else {
+          const c = { id: 'local-ath-' + Date.now(), ...payload };
+          athletes.push(c);
+          metricsByAthlete[c.id] = []; workoutsByAthlete[c.id] = [];
+          activeAthleteId = c.id;
+          saveLocalStorage();
+        }
+        setUrlSlug(slug);
+        showToast(`เพิ่มสมาชิก "${payload.name}" เรียบร้อย`);
+      }
+      closeModal('modal-athlete');
+      renderAll();
+    }
+
+    function askDeleteAthlete(id, name) {
+      openConfirm(`ลบสมาชิก "${name}"?`, 'ประวัติการซ้อมและค่าสุขภาพของสมาชิกคนนี้จะถูกลบทั้งหมด', async () => {
+        if (isSupabaseLive && sb) {
+          const { error } = await sb.from('athletes').delete().eq('id', id);
+          if (error) { showToast('ลบไม่สำเร็จ: ' + error.message); return; }
+        }
+        athletes = athletes.filter(a => a.id !== id);
+        delete metricsByAthlete[id]; delete workoutsByAthlete[id];
+        activeAthleteId = athletes[0]?.id || null;
+        if (athletes[0]) setUrlSlug(athletes[0].slug);
+        if (!isSupabaseLive) saveLocalStorage();
+        renderAll();
+        showToast(`ลบ "${name}" แล้ว`);
+      });
+    }
+
+    function openDailyMetricModal() {
+      const ath = getActiveAthlete();
+      if (!ath) { showToast('กรุณาสร้างโปรไฟล์สมาชิกก่อน'); return; }
+      document.getElementById('modal-daily-user').textContent = `บันทึกให้: ${ath.name}`;
+      document.getElementById('form-daily').reset();
+      document.getElementById('dm-date').value = getTodayISO();
+      document.getElementById('dm-weight').value = ath.weight_kg;
+      openModal('modal-daily');
+    }
+
+    async function handleSaveDailyMetric(e) {
+      e.preventDefault();
+      const ath = getActiveAthlete();
+      const payload = {
+        athlete_id: ath.id,
+        metric_date: document.getElementById('dm-date').value,
+        sleep_hours: Number(document.getElementById('dm-sleep').value),
+        hrv: Number(document.getElementById('dm-hrv').value),
+        resting_hr: Number(document.getElementById('dm-rhr').value),
+        weight_kg: Number(document.getElementById('dm-weight').value) || ath.weight_kg,
+        steps: Number(document.getElementById('dm-steps').value) || null,
+        ai_daily_brief: null
+      };
+      aiAttemptedDailyKeys.delete(`${ath.id}:${payload.metric_date}`);
+
+      if (isSupabaseLive && sb) {
+        const { data, error } = await sb.from('daily_metrics').upsert(payload, { onConflict: 'athlete_id,metric_date' }).select().single();
+        if (error) { showToast('บันทึกไม่สำเร็จ: ' + error.message); return; }
+        if (!metricsByAthlete[ath.id]) metricsByAthlete[ath.id] = [];
+        metricsByAthlete[ath.id] = [data, ...metricsByAthlete[ath.id].filter(m => m.metric_date !== data.metric_date)]
+          .sort((a, b) => b.metric_date.localeCompare(a.metric_date));
+      } else {
+        payload.id = 'local-dm-' + Date.now();
+        if (!metricsByAthlete[ath.id]) metricsByAthlete[ath.id] = [];
+        metricsByAthlete[ath.id] = [payload, ...metricsByAthlete[ath.id].filter(m => m.metric_date !== payload.metric_date)]
+          .sort((a, b) => b.metric_date.localeCompare(a.metric_date));
+        saveLocalStorage();
+      }
+      closeModal('modal-daily');
+      renderAll();
+      showToast('บันทึกสุขภาพและอัปเดต Body Battery แล้ว');
+    }
+
+    function openWorkoutModal() {
+      const ath = getActiveAthlete();
+      if (!ath) { showToast('กรุณาสร้างโปรไฟล์สมาชิกก่อน'); return; }
+      document.getElementById('modal-workout-user').textContent = `บันทึกให้: ${ath.name} (${ath.sex === 'female' ? 'สูตรหญิง' : 'สูตรชาย'})`;
+      document.getElementById('form-workout').reset();
+      document.getElementById('w-date').value = getTodayISO();
+      openModal('modal-workout');
+    }
+
+    async function handleSaveWorkout(e) {
+      e.preventDefault();
+      const ath = getActiveAthlete();
+      const dur = Number(document.getElementById('w-dur').value);
+      const avghr = Number(document.getElementById('w-avghr').value);
+      const trimp = calcBanisterTRIMP(dur, avghr, ath);
+
+      const payload = {
+        athlete_id: ath.id,
+        external_id: `manual_${ath.slug}_${Date.now()}`,
+        workout_date: document.getElementById('w-date').value,
+        sport_type: document.getElementById('w-sport').value,
+        title: document.getElementById('w-title').value.trim(),
+        duration_min: dur,
+        distance_km: Number(document.getElementById('w-dist').value) || 0,
+        avg_hr: avghr,
+        max_hr: Number(document.getElementById('w-maxhr').value) || 0,
+        avg_power: Number(document.getElementById('w-power').value) || 0,
+        rpe: Number(document.getElementById('w-rpe').value) || 6,
+        trimp,
+        source: 'manual'
+      };
+
+      let savedId = null;
+      if (isSupabaseLive && sb) {
+        const { data, error } = await sb.from('workouts').insert(payload).select().single();
+        if (error) { showToast('บันทึกไม่สำเร็จ: ' + error.message); return; }
+        savedId = data.id;
+        if (!workoutsByAthlete[ath.id]) workoutsByAthlete[ath.id] = [];
+        workoutsByAthlete[ath.id].unshift(data);
+      } else {
+        payload.id = 'local-w-' + Date.now();
+        savedId = payload.id;
+        if (!workoutsByAthlete[ath.id]) workoutsByAthlete[ath.id] = [];
+        workoutsByAthlete[ath.id].unshift(payload);
+        saveLocalStorage();
+      }
+
+      closeModal('modal-workout');
+      renderAll();
+      showToast(`บันทึกแล้ว (TRIMP ${trimp}) — เปิดบทวิเคราะห์โค้ช`);
+      openCoachReportModal(savedId);
+    }
+
+    function askDeleteWorkout(id, title) {
+      openConfirm('ลบรายการซ้อม?', `ต้องการลบ "${title}" ใช่หรือไม่?`, async () => {
+        const ath = getActiveAthlete();
+        if (isSupabaseLive && sb) {
+          const { error } = await sb.from('workouts').delete().eq('id', id);
+          if (error) { showToast('ลบไม่สำเร็จ: ' + error.message); return; }
+        }
+        workoutsByAthlete[ath.id] = (workoutsByAthlete[ath.id] || []).filter(w => w.id !== id);
+        if (!isSupabaseLive) saveLocalStorage();
+        renderAll();
+        showToast('ลบรายการซ้อมแล้ว');
+      });
+    }
+
+    function openSupabaseModal() {
+      const { url, key } = getEffectiveCreds();
+      document.getElementById('sb-in-url').value = url;
+      document.getElementById('sb-in-key').value = key;
+      document.getElementById('sb-msg').classList.add('hidden');
+      openModal('modal-supabase');
+    }
+
+    async function connectSupabase() {
+      const url = document.getElementById('sb-in-url').value.trim();
+      const key = document.getElementById('sb-in-key').value.trim();
+      const msg = document.getElementById('sb-msg');
+      if (!url || !key) {
+        msg.textContent = 'กรุณากรอก Supabase URL และ Anon Key';
+        msg.className = 'rounded-xl p-3 text-xs border bg-rose-500/15 border-rose-500/30 text-rose-300';
+        return;
+      }
+      msg.textContent = 'กำลังเชื่อมต่อ Supabase...';
+      msg.className = 'rounded-xl p-3 text-xs border bg-slate-800 border-slate-700 text-slate-300';
+      try {
+        const test = window.supabase.createClient(url, key);
+        const { error } = await test.from('athletes').select('id').limit(1);
+        if (error) throw error;
+        localStorage.setItem(LS.SB_URL, url);
+        localStorage.setItem(LS.SB_KEY, key);
+        await initStorage();
+        activeAthleteId = (athletes.find(a => a.slug === getUrlSlug()) || athletes[0])?.id || null;
+        if (activeAthleteId) setUrlSlug(getActiveAthlete().slug);
+        msg.textContent = '✅ เชื่อมต่อ Supabase สำเร็จ!';
+        msg.className = 'rounded-xl p-3 text-xs border bg-emerald-500/15 border-emerald-500/30 text-emerald-300';
+        renderAll();
+        showToast('เชื่อมต่อ Supabase สำเร็จ');
+      } catch (err) {
+        msg.textContent = '❌ เชื่อมต่อไม่สำเร็จ: ' + err.message;
+        msg.className = 'rounded-xl p-3 text-xs border bg-rose-500/15 border-rose-500/30 text-rose-300';
+      }
+    }
+
+    function disconnectSupabase() {
+      localStorage.removeItem(LS.SB_URL);
+      localStorage.removeItem(LS.SB_KEY);
+      sb = null; isSupabaseLive = false;
+      updateConnectionUI(false);
+      loadLocalStorage();
+      activeAthleteId = athletes[0]?.id || null;
+      closeModal('modal-supabase');
+      renderAll();
+      showToast('ตัดการเชื่อมต่อ Supabase แล้ว');
+    }
+
+    // =========================================================================
+    // 10. UI CONTROLS, NAVIGATION & CLIPBOARD
+    // =========================================================================
+    function switchTab(tab) {
+      currentTab = tab;
+      ['dashboard', 'workouts', 'settings'].forEach(t => {
+        document.getElementById('view-' + t).classList.toggle('hidden', t !== tab);
+      });
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        const active = btn.dataset.tab === tab;
+        btn.className = active
+          ? 'nav-btn px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+          : 'nav-btn px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all text-slate-400 hover:text-white hover:bg-slate-800/70 border border-transparent';
+      });
+      document.querySelectorAll('.mob-nav-btn').forEach(btn => {
+        const active = btn.dataset.tab === tab;
+        btn.className = active
+          ? 'mob-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[11px] font-bold text-emerald-400 bg-emerald-500/10'
+          : 'mob-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[11px] font-medium text-slate-400';
+      });
+      renderAll();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function setTimeframe(tf) {
+      currentTimeframe = tf;
+      renderAll();
+    }
+
+    function setWorkoutFilter(sport) {
+      currentFilter = sport;
+      renderWorkoutsTab();
+    }
+
+    function toggleProfileDropdown(force) {
+      const m = document.getElementById('profile-dropdown-menu');
+      const show = typeof force === 'boolean' ? force : m.classList.contains('hidden');
+      m.classList.toggle('hidden', !show);
+    }
+
+    document.addEventListener('click', (e) => {
+      const btn = document.getElementById('profile-dropdown-btn');
+      const menu = document.getElementById('profile-dropdown-menu');
+      if (btn && menu && !btn.contains(e.target) && !menu.contains(e.target)) menu.classList.add('hidden');
+    });
+
+    function openModal(id) {
+      const m = document.getElementById(id);
+      m.classList.remove('hidden'); m.classList.add('flex');
+      lucide.createIcons();
+    }
+    function closeModal(id) {
+      const m = document.getElementById(id);
+      m.classList.add('hidden'); m.classList.remove('flex');
+      if (id === 'modal-coach-report') {
+        activeModalWorkoutId = null;
+        if (modalWoAiAbortController) {
+          modalWoAiAbortController.abort();
+          modalWoAiAbortController = null;
+        }
+      }
+    }
+
+    function openConfirm(title, desc, fn) {
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-desc').textContent = desc;
+      pendingConfirmFn = fn;
+      openModal('modal-confirm');
+    }
+    document.getElementById('confirm-ok-btn').addEventListener('click', async () => {
+      if (pendingConfirmFn) await pendingConfirmFn();
+      closeModal('modal-confirm');
+      pendingConfirmFn = null;
+    });
+
+    function copyText(text, successMsg) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast(successMsg);
+      } catch (err) {
+        showToast('คัดลอกไม่สำเร็จ');
+      }
+      document.body.removeChild(ta);
+    }
+
+    function copyBlockText(elId, msg) {
+      copyText(document.getElementById(elId).textContent, msg);
+    }
+
+    function copyPersonalUrl(slugOverride) {
+      const ath = slugOverride ? athletes.find(a => a.slug === slugOverride) : getActiveAthlete();
+      if (!ath) { showToast('ยังไม่มีสมาชิกให้คัดลอกลิงก์'); return; }
+      let url = '';
+      try {
+        const u = new URL(window.location.href);
+        u.searchParams.set('u', ath.slug); u.hash = '';
+        url = u.toString();
+      } catch (e) {
+        url = `${window.location.origin}${window.location.pathname}?u=${ath.slug}`;
+      }
+      copyText(url, `คัดลอกลิงก์ส่วนตัวของ ${ath.name} (?u=${ath.slug}) แล้ว`);
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      document.getElementById('toast-text').textContent = msg;
+      t.classList.remove('hidden'); t.classList.add('flex');
+      clearTimeout(window._tt);
+      window._tt = setTimeout(() => { t.classList.add('hidden'); t.classList.remove('flex'); }, 2800);
+    }
+
+    // Drag & Drop support for GPX zone
+    window.addEventListener('DOMContentLoaded', async () => {
+      const dz = document.getElementById('gpx-dropzone');
+      if (dz) {
+        ['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => {
+          e.preventDefault(); dz.classList.add('border-cyan-400', 'bg-cyan-500/10');
+        }));
+        ['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => {
+          e.preventDefault(); dz.classList.remove('border-cyan-400', 'bg-cyan-500/10');
+        }));
+        dz.addEventListener('drop', e => {
+          const file = e.dataTransfer?.files?.[0];
+          if (file) processGpxFile(file);
+        });
+      }
+
+      await initStorage();
+      const slug = getUrlSlug();
+      const matched = athletes.find(a => a.slug === slug) || athletes[0] || null;
+      if (matched) {
+        activeAthleteId = matched.id;
+        setUrlSlug(matched.slug);
+      }
+      switchTab('dashboard');
+    });
+  </script>
+</body>
+</html>
